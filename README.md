@@ -4,7 +4,15 @@ Type a one-line idea, pick a genre, and GitHub Actions makes a **4–5 minute an
 (16:9, 1080p)** plus a **60-second vertical Short (9:16)** cut from its best moment. The pipeline
 writes the story, voices it, renders it in Blender, and edits it.
 
-## Fully automatic
+## Fully automatic series: robot motor racing
+The AI creates the series once (`series/bible.json`: title, world, fixed cast with looks, voices and
+race-car colours). Every day the next episode is written from the bible plus summaries of earlier episodes
+(`series/episodes/`), rendered and published, so the story continues and the characters stay the same.
+Racing is built in: a full circuit with grandstand crowd, start lights, 6 race cars driven by the cast,
+starts, overtakes, crashes, finishes, the team garage, and TV race cameras (chase, onboard, bumper,
+trackside long lens, helicopter, driver close-up). To start a different series, delete `series/` and set
+`SERIES_THEME`.
+
 Every day at 20:17 UTC a new film is made with no input: the AI picks the genre, invents the idea, and
 the finished film + Short are published under **Releases** (kept forever).
 

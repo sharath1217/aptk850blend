@@ -11,6 +11,8 @@ Everything is built in code, so no assets are needed:
              handheld, top_down - with depth of field, motion blur and mist
 Frames are dealt out across the render machines (frame g -> machine g % chunks)."""
 import bpy, glob, json, math, os, random, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import racing
 from mathutils import Vector
 
 FPS = 24
@@ -356,8 +358,39 @@ def set_forest(time, rng, x0, x1):
         light("POINT", (0, 2, 3), 150, (1, 0.8, 0.4), size=2)
 
 
+LAMPS = []
+HERO = [(0.9, 0.35, 0.05)]  # team colour of the lead character (set per shot)
+
+
+def set_racetrack(time, rng, x0, x1):
+    LAMPS[:] = racing.build_track(time, mat, prim, light, rng, ground)
+
+
+def set_garage(time, rng, x0, x1):
+    """Race team garage: epoxy floor, team car on display, tool chests, strip lights, open door to the pit lane."""
+    ground(30, 30, mat("epoxy", (0.25, 0.27, 0.3), 0.15), 0, 0)
+    wall = mat("gwall", (0.82, 0.84, 0.86), 0.6)
+    prim("cube", (0, 8, 4), (12, 0.2, 4), material=wall); prim("cube", (-12, 0, 4), (0.2, 8, 4), material=wall)
+    prim("cube", (12, 0, 4), (0.2, 8, 4), material=wall); prim("cube", (0, 0, 8), (12, 8, 0.2), material=wall)
+    prim("cube", (0, 7.7, 3.5), (6, 0.05, 1.2), material=mat("teamboard", (0.9, 0.35, 0.05), 0.4, emit=1.0))
+    for x in (-6, 0, 6):
+        prim("cube", (x, 2, 7.7), (2.5, 0.15, 0.05), material=mat(f"strip{x}", (1, 1, 1), emit=25))
+        light("AREA", (x, 2, 7.6), 600, (0.95, 0.97, 1.0), size=4)
+    red = mat("chest", (0.75, 0.05, 0.05), 0.3, 0.5)
+    for x in (-9, -7.6, 8):
+        prim("cube", (x, 7, 0.6), (0.6, 0.45, 0.6), material=red, bevel=0.03)
+    tyre = mat("gtyre", (0.02, 0.02, 0.02), 0.7)
+    for k in range(4):
+        prim("cylinder", (9.5, 4, 0.18 + k * 0.36), (0.42, 0.42, 0.17), material=tyre)
+    car, _ = racing.race_car(mat, prim, light, empty, HERO[0], HERO[0], 7, False)
+    car.location = (0, 4.2, 0); car.rotation_euler = (0, 0, 0.35)
+    if time != "day":
+        light("AREA", (0, -9, 3), 300, (0.4, 0.5, 0.8), rot=(math.radians(-90), 0, 0), size=8)
+
+
 SETS = {"coast": set_coast, "city": set_city, "planet": set_planet, "toytown": set_toytown,
-        "room": set_room, "forest": set_forest}
+        "room": set_room, "forest": set_forest, "racetrack": set_racetrack, "garage": set_garage}
+RACE = {"race_start", "race", "overtake", "crash", "finish"}
 
 
 # ---------------------------------------------------------------- weather (stateless, no simulation)
@@ -645,7 +678,20 @@ def build_shot(story, i, assets, quality):
     if set_name == "room":
         travel = min(travel, 7)
     x0 = -travel / 2
+    if veh in RACE:
+        set_name = "racetrack"
+    lead = story["cast"].get(shot["characters"][0]["id"]) if shot["characters"] else next(iter(story["cast"].values()))
+    HERO[0] = COLORS.get(lead["color"], COLORS["orange"])
     SETS[set_name](time_, rng, x0 - 20, x0 + travel + 20)
+    if veh in RACE:
+        cars, state = racing.race(shot, story, n, (mat, prim, light, empty))
+        if veh == "race_start":
+            racing.start_lights(LAMPS, n)
+        focus = empty("focus"); focus.parent = cars[0][0]
+        weather(shot["weather"], focus, n)
+        racing.race_camera(shot, cars, state, n, empty)
+        finish_look(sc, shot, time_, set_name)
+        return n
     focus = empty("focus"); scale = 1.0; ots = None
     talk = {}
     for ln in shot["lines"]:
@@ -729,10 +775,15 @@ def build_shot(story, i, assets, quality):
     light("AREA", (1.5, 0.5, 0.8), (25 if time_ == "day" else 60) * scale * scale, (1, 0.95, 0.9), size=2.5 * scale, parent=cam)
     rim = light("AREA", (0, 3 * scale, 3 * scale), 120 * scale * scale, (0.7, 0.8, 1.0) if time_ != "dusk" else (1, 0.6, 0.35),
                 rot=(math.radians(-130), 0, 0), size=3 * scale, parent=focus)
+    finish_look(sc, shot, time_, set_name)
+    return n
+
+
+def finish_look(sc, shot, time_, set_name):
     # mist / fog in the compositor
     sc.view_layers[0].use_pass_mist = True
     w = sc.world; w.mist_settings.start = 3 if shot["weather"] == "fog" else 25
-    w.mist_settings.depth = 35 if shot["weather"] == "fog" else (250 if set_name != "room" else 1000)
+    w.mist_settings.depth = 35 if shot["weather"] == "fog" else {"room": 1000, "garage": 1000, "racetrack": 900}.get(set_name, 250)
     sc.use_nodes = True; nt = sc.node_tree
     rl, comp = nt.nodes["Render Layers"], nt.nodes["Composite"]
     mix = nt.nodes.new("CompositorNodeMixRGB")
@@ -744,7 +795,6 @@ def build_shot(story, i, assets, quality):
     mul.inputs[1].default_value = 0.85 if shot["weather"] == "fog" else 0.45
     nt.links.new(rl.outputs["Mist"], mul.inputs[0]); nt.links.new(mul.outputs[0], mix.inputs[0])
     nt.links.new(rl.outputs["Image"], mix.inputs[1]); nt.links.new(mix.outputs[0], comp.inputs[0])
-    return n
 
 
 def main():

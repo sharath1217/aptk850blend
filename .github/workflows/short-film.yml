@@ -2,13 +2,18 @@ name: Short film
 
 on:
   schedule:
-    - cron: "17 20 * * *"   # every day: the AI picks the genre and invents the idea itself
+    - cron: "17 20 * * *"   # every day: the next episode of the series, written, rendered and published by itself
   workflow_dispatch:
     inputs:
-      genre:
-        description: "Genre"
+      mode:
+        description: "series = next episode of the series (same characters, continues the story) | single = one-off film"
         type: choice
-        options: [auto, drama, action, scifi, comedy]
+        options: [series, single]
+        default: series
+      genre:
+        description: "Genre (single films only)"
+        type: choice
+        options: [auto, racing, drama, action, scifi, comedy]
         default: auto
       idea:
         description: "One-line idea (leave empty: the AI invents one)"
@@ -22,6 +27,8 @@ on:
         options: [stills, draft, final]
         default: final
 
+concurrency: {group: film, cancel-in-progress: false}   # one episode at a time
+
 permissions:
   contents: write   # finished films are published as GitHub Releases (kept forever)
 
@@ -32,6 +39,7 @@ env:
   GENRE: ${{ inputs.genre || 'auto' }}
   MINUTES: ${{ inputs.minutes || '4.5' }}
   QUALITY: ${{ inputs.quality || 'final' }}
+  SERIES_MODE: ${{ (inputs.mode || 'series') == 'series' && '1' || '' }}
 
 jobs:
   write:   # story, shot list, voices (and a real vehicle model if the story has one)
@@ -49,6 +57,14 @@ jobs:
           IDEA: ${{ inputs.idea }}
         run: python studio/film/writer.py assets "$GENRE" "$IDEA" "$MINUTES"
       - run: cat assets/script.txt >> "$GITHUB_STEP_SUMMARY"
+      - name: Save the series bible the first time (characters stay the same forever)
+        if: env.SERIES_MODE == '1'
+        run: |
+          if [ ! -f series/bible.json ] && [ -f assets/series/bible.json ]; then
+            mkdir -p series && cp assets/series/bible.json series/
+            git config user.name "film-bot" && git config user.email "film-bot@users.noreply.github.com"
+            git add series/bible.json && git commit -m "Series bible: $(python3 -c "import json;print(json.load(open('series/bible.json'))['series_title'])")" && git push
+          fi
       - uses: actions/upload-artifact@v4
         with: {name: film-assets, path: assets/, retention-days: 2}
 
@@ -101,3 +117,10 @@ jobs:
           TAG="film-$(date +%Y%m%d)-${{ github.run_id }}"
           gh release create "$TAG" film/film.mp4 film/short.mp4 film/subtitles.srt film/script.txt film/credits.txt \
             --repo "${{ github.repository }}" --title "$T" --notes-file film/script.txt
+      - name: Remember this episode (the next one continues the story)
+        if: env.QUALITY == 'final' && env.SERIES_MODE == '1'
+        run: |
+          git pull -q origin main
+          mkdir -p series/episodes && cp assets/series/episodes/*.json series/episodes/
+          git config user.name "film-bot" && git config user.email "film-bot@users.noreply.github.com"
+          git add series && git commit -m "Episode published: $(ls assets/series/episodes)" && git push

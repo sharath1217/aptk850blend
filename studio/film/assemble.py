@@ -18,6 +18,7 @@ MUSIC = {  # chord (Hz) and pulse per genre: slow pads for drama, a driving puls
     "action": ([55, 82.4, 110, 130.8], 0.06, 2.0),
     "scifi": ([65.4, 98, 130.8, 196, 311.1], 0.06, 0.25),
     "comedy": ([261.6, 329.6, 392, 523.3], 0.035, 3.0),
+    "racing": ([73.4, 110, 146.8, 220], 0.06, 2.5),
 }
 
 
@@ -72,12 +73,13 @@ def main():
     amb = []
     for s in st["shots"]:
         a, b = s["start"] / FPS, (s["start"] + s["frames"]) / FPS
-        kind = "rain" if s["weather"] == "rain" else ("sea" if s["set"] == "coast" else
+        kind = "engine" if s["vehicle"] in ("race_start", "race", "overtake", "crash", "finish") else "rain" if s["weather"] == "rain" else ("sea" if s["set"] == "coast" else
                ("city" if s["set"] == "city" else ("wind" if s["set"] in ("forest", "planet") or s["weather"] == "snow" else None)))
         if kind:
             amb.append((kind, a, b))
     noise = {"rain": ("pink:a=0.5", "highpass=f=900"), "sea": ("brown:a=0.6", "lowpass=f=500,tremolo=f=0.12:d=0.7"),
-             "city": ("brown:a=0.4", "lowpass=f=300"), "wind": ("pink:a=0.3", "lowpass=f=700,tremolo=f=0.2:d=0.6")}
+             "city": ("brown:a=0.4", "lowpass=f=300"),
+             "engine": ("brown:a=0.9", "bandpass=f=220:w=180,tremolo=f=38:d=0.5,volume=2.2"), "wind": ("pink:a=0.3", "lowpass=f=700,tremolo=f=0.2:d=0.6")}
     amb_in, amb_mix = [], []
     for k, (src, fx) in noise.items():
         spans = [(a, b) for kk, a, b in amb if kk == k]

@@ -13,19 +13,24 @@ from pathlib import Path
 import httpx
 
 FPS = 24
+COLORS_HINT = ["orange", "blue", "red", "green", "yellow", "purple", "white", "pink"]
 VOCAB = {
-    "set": ["coast", "city", "planet", "toytown", "room", "forest"],
+    "set": ["racetrack", "garage", "coast", "city", "planet", "toytown", "room", "forest"],
     "time": ["day", "dusk", "night"],
     "weather": ["clear", "rain", "snow", "fog"],
     "camera": ["establish", "push_in", "orbit", "track", "closeup", "over_shoulder",
                "low_angle", "crane_up", "handheld", "top_down"],
     "action": ["idle", "talk", "walk", "run", "wave", "look", "jump", "dance", "sad", "fall"],
-    "vehicle": ["none", "car_drive", "car_chase", "ship_fly", "ship_land"],
+    "vehicle": ["none", "race_start", "race", "overtake", "crash", "finish", "car_drive", "car_chase", "ship_fly", "ship_land"],
 }
 VOICES = ["en-US-GuyNeural", "en-US-JennyNeural", "en-GB-RyanNeural", "en-US-AnaNeural",
           "en-GB-SoniaNeural", "en-AU-WilliamNeural", "en-US-DavisNeural", "en-US-AriaNeural"]
 NARRATOR = "en-US-ChristopherNeural"
 GENRE_HINT = {
+    "racing": ("a motorsport drama: rivalry, team spirit, comebacks; sets racetrack (race_start, race, overtake, crash, "
+               "finish - the race cars are driven by the characters) and garage (team talks, repairs, pressure); "
+               "on-track cameras: track (chase cam), handheld (onboard), low_angle (bumper cam), push_in (TV trackside "
+               "long lens), establish (helicopter), closeup (driver), orbit"),
     "drama": "an emotional drama (loss, hope, friendship); sets coast, room, forest; slow cameras; warm dusk light",
     "action": "a tense action thriller with a car chase; sets city (night, rain), car_chase vehicles; fast cuts, handheld, low angles",
     "scifi": "a science-fiction adventure; sets planet and a spaceship (ship_fly / ship_land); wonder and danger",
@@ -50,11 +55,15 @@ def llm(prompt: str, temperature: float = 0.8) -> str:
     raise SystemExit("LLM unavailable")
 
 
+CONTEXT = ""  # series mode: the bible + "previously on" summaries
+
+
 def treatment(genre: str, idea: str, minutes: float) -> str:
     """Pass 1: a proper story (structure, character arcs, set pieces) before any camera talk."""
     return llm(f"""You are an award-winning animation screenwriter (think Pixar shorts).
 Write the story treatment for a {minutes:.0f}-minute animated short. Genre: {GENRE_HINT.get(genre, genre)}.
 Idea: {idea}
+{CONTEXT}
 All characters are expressive stylised robots (2-4 of them), each with a name, a want, a flaw and a
 distinct way of talking. Places available: coast with a lighthouse, night city, alien planet,
 cartoon toytown, a cosy room, a forest (day, dusk or night; rain, snow or fog).
@@ -75,6 +84,7 @@ animated short film. Genre: {GENRE_HINT.get(genre, genre)}.
 
 TREATMENT:
 {story_text}
+{CONTEXT}
 
 DIRECTING RULES (follow them, they make the film look professional):
 - Open every new location or time of day with an "establish" or "crane_up" shot.
@@ -129,10 +139,10 @@ Return ONLY JSON, no markdown:
     raise SystemExit("The LLM did not return a usable story")
 
 
-def clean(story: dict) -> dict:
+def clean(story: dict, fixed_cast: dict | None = None) -> dict:
     pick = lambda v, key, d: v if v in VOCAB[key] else d
     cast, vi = {}, 0
-    for c in story.get("cast", [])[:4]:
+    for c in ([] if fixed_cast else story.get("cast", [])[:4]):
         cid = re.sub(r"\W", "", str(c.get("id") or c.get("name", "bot")).lower())[:16] or f"bot{vi}"
         kind = c.get("voice", "male")
         voice = {"female": ["en-US-JennyNeural", "en-GB-SoniaNeural", "en-US-AriaNeural"],
@@ -144,6 +154,8 @@ def clean(story: dict) -> dict:
                      "color": c.get("color", "orange"), "shape": c.get("shape", "box"),
                      "personality": c.get("personality", ""), "slot": vi}
         vi += 1
+    if fixed_cast:
+        cast = {k: dict(v) for k, v in fixed_cast.items()}
     if not cast:
         cast["bolt"] = {"id": "bolt", "name": "Bolt", "voice": "en-US-GuyNeural", "color": "orange",
                         "shape": "box", "personality": "", "slot": 0}
@@ -266,16 +278,100 @@ def invent(genre: str) -> tuple[str, str]:
     return genre, idea
 
 
+# ------------------------------------------------------------------ series mode
+SERIES = Path(os.environ.get("SERIES_DIR", "series"))
+
+
+def ask_json(prompt: str) -> dict:
+    for _ in range(4):
+        m = re.search(r"\{.*\}", llm(prompt, temperature=0.9), re.S)
+        try:
+            return json.loads(m.group(0))
+        except Exception as exc:
+            log("Bad JSON, retrying:", exc)
+    raise SystemExit("LLM gave no JSON")
+
+
+THEME = os.environ.get("SERIES_THEME", "a robot motor-racing championship: a young underdog robot racing driver, "
+                       "their small family team, and a fierce rival team - every episode builds to a race")
+
+
+def series_bible() -> dict:
+    """Created once by the AI, then kept forever: same characters, looks and voices every episode."""
+    f = SERIES / "bible.json"
+    if f.exists():
+        return json.loads(f.read_text())
+    b = ask_json(f"""Create an original animated web SERIES about stylised robots that can run for many
+episodes (heart, humour, rivalry and thrilling action, family friendly). Theme: {THEME}.
+The characters' colours are also their race-car colours. Return ONLY JSON:
+{{"series_title": "...", "premise": "2 sentences", "world": "where they live, 2 sentences",
+  "home_set": one of {VOCAB['set']}, "tone": "...",
+  "cast": [{{"id": "lowercase", "name": "...", "color": one of {list(COLORS_HINT)}, "shape": "box|round|tall",
+            "voice": "male|female|child|old", "personality": "...", "want": "...", "flaw": "...",
+            "catchphrase": "..."}}],
+  "season_arc": "the big story that unfolds over the first 10 episodes"}}
+3 or 4 cast members with very different looks (different colours AND shapes) and personalities.""")
+    cast = clean({"cast": b.get("cast", []), "shots": []})["cast"]
+    for c, raw in zip(cast.values(), b.get("cast", [])):
+        for k in ("want", "flaw", "catchphrase"):
+            c[k] = raw.get(k, "")
+    b["cast"] = cast
+    if b.get("home_set") not in VOCAB["set"]:
+        b["home_set"] = "coast"
+    SERIES.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(b, indent=1))
+    log("NEW SERIES:", b.get("series_title"))
+    return b
+
+
+def episodes() -> list[dict]:
+    return [json.loads(p.read_text()) for p in sorted((SERIES / "episodes").glob("ep*.json"))]
+
+
+def series_episode() -> tuple[str, str, dict, int]:
+    global CONTEXT
+    b, hist = series_bible(), episodes()
+    n = len(hist) + 1
+    cast_txt = "\n".join(f"- {c['name']} (id {c['id']}, {c['color']} {c['shape']} robot): {c['personality']}. "
+                         f"Wants: {c.get('want', '')}. Flaw: {c.get('flaw', '')}. Catchphrase: \"{c.get('catchphrase', '')}\""
+                         for c in b["cast"].values())
+    prev = "\n".join(f"Episode {e['n']} \"{e['title']}\": {e['summary']}" for e in hist[-6:]) or "(this is the pilot)"
+    CONTEXT = (f"\nTHIS IS EPISODE {n} OF THE SERIES \"{b['series_title']}\". {b['premise']} World: {b['world']}\n"
+               f"Home location: {b['home_set']}. Tone: {b.get('tone', '')}. Season arc: {b.get('season_arc', '')}\n"
+               f"MAIN CAST (use ONLY these characters, with these exact ids):\n{cast_txt}\n"
+               f"PREVIOUSLY:\n{prev}\n"
+               "Keep characters consistent with earlier episodes, call back to past events, move the season arc\n"
+               "forward a little, and end with a small hook for the next episode.\n")
+    e = ask_json(f"""{CONTEXT}
+Pitch episode {n}: its genre (one of {list(GENRE_HINT)}; for a racing series mostly "racing") and a
+one-sentence idea (a race or a challenge on track, plus a personal story off track).
+Return ONLY JSON: {{"genre": "...", "idea": "..."}}""")
+    genre = e.get("genre") if e.get("genre") in GENRE_HINT else "racing"
+    return genre, e.get("idea", "A new adventure"), b, n
+
+
 def main() -> None:
     out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
     genre, idea = sys.argv[2].lower(), sys.argv[3].strip()
-    if genre in ("", "auto") or not idea:
+    minutes = float(sys.argv[4]) if len(sys.argv) > 4 else 4.5
+    bible, ep = None, 0
+    if os.environ.get("SERIES_MODE") == "1":
+        genre, idea, bible, ep = series_episode()
+    elif genre in ("", "auto") or not idea:
         genre, idea = invent(genre)
     log("Genre:", genre, "| Idea:", idea)
-    minutes = float(sys.argv[4]) if len(sys.argv) > 4 else 4.5
-    story = clean(write_story(genre, idea, minutes))
+    story = clean(write_story(genre, idea, minutes), bible["cast"] if bible else None)
     direct(story)
     story["genre"], story["idea"] = genre, idea
+    if bible:
+        story["series"], story["episode"] = bible["series_title"], ep
+        story["title"] = f"{bible['series_title']} - Episode {ep}: {story['title']}"
+        summary = llm(f"Summarise this episode in 3 sentences for a 'previously on' recap, naming the "
+                      f"characters and what changed:\n{json.dumps([l['text'] for s in story['shots'] for l in s['lines']])}\n"
+                      f"Idea: {idea}", temperature=0.3).strip()
+        d = out / "series" / "episodes"; d.mkdir(parents=True, exist_ok=True)
+        (out / "series" / "bible.json").write_text(json.dumps(bible, indent=1))
+        (d / f"ep{ep:03d}.json").write_text(json.dumps({"n": ep, "title": story["title"], "idea": idea,
+                                                         "summary": summary}, indent=1))
     voice_and_time(story, out, minutes)
     vm = str(story.get("vehicle_model", "none"))
     if any(s["vehicle"] != "none" for s in story["shots"]) and vm.lower() != "none" and os.environ.get("BLENDER"):
