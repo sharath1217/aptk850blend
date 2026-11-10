@@ -109,7 +109,7 @@ def main():
         credit_lines.append(st["credits_model"])
     (out / "credits.txt").write_text("\n".join(credit_lines) + "\n")
     shutil.copy(assets / "script.txt", out / "script.txt")
-    vf = ("scale=1920:1080:flags=lanczos,eq=contrast=1.04:saturation=1.05,vignette=PI/5,noise=alls=5:allf=t,"
+    vf = ("scale=1920:1080:flags=lanczos,eq=contrast=1.04:saturation=1.05,vignette=PI/5,noise=alls=2:allf=t,"
           "drawbox=y=0:w=iw:h=ih*0.07:color=black:t=fill,drawbox=y=ih*0.93:w=iw:h=ih*0.07:color=black:t=fill,"
           f"drawtext=fontfile={FONT}:text='{title}':fontsize=84:fontcolor=white:x=(w-tw)/2:y=(h-th)/2:"
           f"alpha='if(lt(t,0.6),t/0.6,if(lt(t,3.2),1,max(0,(4-t)/0.8)))':enable='lt(t,4)',"
@@ -121,7 +121,7 @@ def main():
                      for k, t in enumerate(credit_lines) if t)
           + f",fade=t=in:d=1,fade=t=out:st={total - 1.2}:d=1.2")
     run("ffmpeg", "-y", "-framerate", FPS, "-i", frames / "f_%05d.jpg", "-i", work / "mix.wav", "-vf", vf,
-        "-c:v", "libx264", "-preset", "slow", "-crf", 18, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+        "-c:v", "libx264", "-preset", "slow", "-crf", 21, "-maxrate", "12M", "-bufsize", "24M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart", "-shortest", out / "film.mp4")
 
     # ---- the Short (vertical 1080x1920, <= 60 s)
@@ -141,7 +141,7 @@ def main():
     run("ffmpeg", "-y", "-framerate", FPS, "-start_number", sh["start"], "-t", d, "-i", frames / "f_%05d.jpg",
         "-ss", a, "-t", d, "-i", work / "mix.wav", "-filter_complex", vf2, "-map", "[v]", "-map", "1:a",
         "-af", f"afade=t=in:d=0.5,afade=t=out:st={d - 0.8}:d=0.8",
-        "-c:v", "libx264", "-preset", "slow", "-crf", 19, "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+        "-c:v", "libx264", "-preset", "slow", "-crf", 22, "-maxrate", "10M", "-bufsize", "20M", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
         "-movflags", "+faststart", out / "short.mp4")
     shutil.rmtree(work)
 
