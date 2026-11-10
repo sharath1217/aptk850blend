@@ -60,10 +60,10 @@ jobs:
       - name: Save the series bible the first time (characters stay the same forever)
         if: env.SERIES_MODE == '1'
         run: |
-          if [ ! -f series/bible.json ] && [ -f assets/series/bible.json ]; then
-            mkdir -p series && cp assets/series/bible.json series/
+          git add series/bible.json
+          if ! git diff --cached --quiet; then
             git config user.name "film-bot" && git config user.email "film-bot@users.noreply.github.com"
-            git add series/bible.json && git commit -m "Series bible: $(python3 -c "import json;print(json.load(open('series/bible.json'))['series_title'])")" && git push
+            git commit -m "Series bible: $(python3 -c "import json;print(json.load(open('series/bible.json'))['series_title'])")" && git push
           fi
       - uses: actions/upload-artifact@v4
         with: {name: film-assets, path: assets/, retention-days: 2}

@@ -394,7 +394,9 @@ def main() -> None:
     story["genre"], story["idea"] = genre, idea
     if bible:
         story["series"], story["episode"] = bible["series_title"], ep
-        story["title"] = f"{bible['series_title']} - Episode {ep}: {story['title']}"
+        t = re.sub(rf"^\s*{re.escape(bible['series_title'])}\s*[-:|]*\s*", "", story["title"], flags=re.I)
+        t = re.sub(r"^\s*(episode|ep\.?)\s*\d+\s*[-:|]*\s*", "", t, flags=re.I) or "Untitled"
+        story["title"] = f"{bible['series_title']} - Episode {ep}: {t}"
         summary = llm(f"Summarise this episode in 3 sentences for a 'previously on' recap, naming the "
                       f"characters and what changed:\n{json.dumps([l['text'] for s in story['shots'] for l in s['lines']])}\n"
                       f"Idea: {idea}", temperature=0.3).strip()
