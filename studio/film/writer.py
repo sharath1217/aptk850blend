@@ -56,7 +56,8 @@ def write_story(genre: str, idea: str, minutes: float) -> dict:
 Genre: {GENRE_HINT.get(genre, genre)}.
 Idea: {idea}
 
-The film is made of {n_shots - 4} to {n_shots + 4} shots (each 4-12 seconds) with a clear
+The film MUST have AT LEAST {n_shots} shots (each 4-10 seconds, numbered in your head 1..{n_shots}) - a short
+list is useless; write every shot with a clear
 beginning, conflict, climax and satisfying ending. All characters are expressive stylised ROBOTS
 (no humans, no animals) - give each a name and personality. Max 4 characters, max 2 per shot.
 Keep dialogue short, natural and emotional (max 2 lines per shot, max 18 words per line).
@@ -79,15 +80,22 @@ Return ONLY JSON, no markdown:
              "characters": [{{"id": "bolt", "action": "walk"}}], "vehicle": "none",
              "lines": [{{"speaker": "bolt", "text": "..."}}]}}]}}
 "short" must be 6-10 consecutive shots forming the most gripping ~50 second moment."""
-    for attempt in range(3):
+    best = None
+    for attempt in range(5):
         raw = llm(prompt)
         m = re.search(r"\{.*\}", raw, re.S)
         try:
             story = json.loads(m.group(0))
-            if len(story.get("shots", [])) >= 8:
-                return story
         except Exception as exc:
-            log("Bad JSON, retrying:", exc)
+            log("Bad JSON, retrying:", exc); continue
+        got = len(story.get("shots", []))
+        log(f"Attempt {attempt + 1}: {got} shots (need {int(n_shots * 0.75)}+)")
+        if not best or got > len(best["shots"]):
+            best = story
+        if got >= n_shots * 0.75:
+            return story
+    if best and len(best["shots"]) >= 8:
+        return best
     raise SystemExit("The LLM did not return a usable story")
 
 
@@ -168,7 +176,7 @@ def voice_and_time(story: dict, out: Path, minutes: float) -> None:
         s["duration"] = max(s["duration"] + (TITLE if i == 0 else 0), cursor + 0.6)
     total = sum(s["duration"] for s in story["shots"])
     if total < minutes * 60 * 0.85:  # too short: let silent moments breathe
-        k = minutes * 60 * 0.9 / total
+        k = min(1.5, minutes * 60 * 0.9 / total)
         for s in story["shots"]:
             s["duration"] *= k
     start = 0
