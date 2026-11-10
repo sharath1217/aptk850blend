@@ -248,12 +248,19 @@ def voice_and_time(story: dict, out: Path, minutes: float) -> None:
         for ln in s["lines"]:
             voice = NARRATOR if ln["speaker"] == "narrator" else story["cast"][ln["speaker"]]["voice"]
             f = out / "lines" / f"l{n:03d}.mp3"; n += 1
-            for attempt in range(4):
-                r = subprocess.run(["edge-tts", "--voice", voice, "--text", ln["text"],
-                                    "--write-media", str(f)], capture_output=True, text=True)
-                if r.returncode == 0 and f.exists():
-                    break
-                time.sleep(3)
+            text = re.sub(r"[<>&*_#\[\]{}]", "", ln["text"]).strip() or "..."
+            ok = False
+            for attempt in range(8):  # the free voice service sometimes drops a request: retry, then a backup voice
+                v = voice if attempt < 5 else ("en-US-GuyNeural" if voice != "en-US-GuyNeural" else "en-US-JennyNeural")
+                r = subprocess.run(["edge-tts", "--voice", v, "--text", text, "--write-media", str(f)],
+                                   capture_output=True, text=True)
+                if r.returncode == 0 and f.exists() and f.stat().st_size > 1000:
+                    ok = True; break
+                log(f"voice retry {attempt + 1} for line {n - 1}: {r.stderr[-200:]}")
+                time.sleep(3 * (attempt + 1))
+            if not ok:  # never let one line kill the film: keep the subtitle, use a short silence
+                subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono",
+                                "-t", str(max(1.5, len(text) / 15)), str(f)], check=True)
             ln["file"] = f.name; ln["at"] = round(cursor, 3); ln["len"] = round(duration(f), 3)
             cursor += ln["len"] + 0.35
         s["duration"] = max(s["duration"] + (TITLE if i == 0 else 0), cursor + 0.6)
