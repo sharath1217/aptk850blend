@@ -191,9 +191,22 @@ def voice_and_time(story: dict, out: Path, minutes: float) -> None:
         f"Short: shots {a}-{b} ({(sh['end'] - sh['start']) / FPS:.0f} s)")
 
 
+def invent(genre: str) -> tuple[str, str]:
+    """Fully automatic mode: pick a genre (rotating by day) and let the AI invent a fresh idea."""
+    if genre in ("", "auto"):
+        genre = list(GENRE_HINT)[int(time.time() // 86400) % len(GENRE_HINT)]
+    idea = llm(f"Invent ONE original, surprising idea for a 4-minute animated short film about robots. "
+               f"Genre: {GENRE_HINT[genre]}. Strong emotion, a clear goal and a twist ending. "
+               f"Reply with one sentence only.", temperature=1.0).strip().strip('"')
+    return genre, idea
+
+
 def main() -> None:
     out = Path(sys.argv[1]); out.mkdir(parents=True, exist_ok=True)
-    genre, idea = sys.argv[2].lower(), sys.argv[3]
+    genre, idea = sys.argv[2].lower(), sys.argv[3].strip()
+    if genre in ("", "auto") or not idea:
+        genre, idea = invent(genre)
+    log("Genre:", genre, "| Idea:", idea)
     minutes = float(sys.argv[4]) if len(sys.argv) > 4 else 4.5
     story = clean(write_story(genre, idea, minutes))
     story["genre"], story["idea"] = genre, idea

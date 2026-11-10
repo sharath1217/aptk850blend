@@ -4,13 +4,17 @@ Type a one-line idea, pick a genre, and GitHub Actions makes a **4–5 minute an
 (16:9, 1080p)** plus a **60-second vertical Short (9:16)** cut from its best moment. The pipeline
 writes the story, voices it, renders it in Blender, and edits it.
 
-## How to make a film
+## Fully automatic
+Every day at 20:17 UTC a new film is made with no input: the AI picks the genre, invents the idea, and
+the finished film + Short are published under **Releases** (kept forever).
+
+## How to make a film by hand
 Actions → **Short film** → *Run workflow*:
 
 | input | what it does |
 |---|---|
-| `genre` | `drama`, `action`, `scifi`, `comedy` |
-| `idea` | one line, e.g. *"A delivery robot races across the city to bring medicine to its sick friend"* |
+| `genre` | `auto` (rotates daily), `drama`, `action`, `scifi`, `comedy` |
+| `idea` | leave empty and the AI invents one (or type your own) |
 | `minutes` | 4–5 |
 | `quality` | `stills` = one picture per shot (about 15 min, to check the story first) · `draft` = 540p · `final` = 1080p |
 
