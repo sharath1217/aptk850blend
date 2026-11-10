@@ -1,0 +1,90 @@
+name: Short film
+
+on:
+  workflow_dispatch:
+    inputs:
+      genre:
+        description: "Genre"
+        type: choice
+        options: [drama, action, scifi, comedy]
+        default: drama
+      idea:
+        description: "One-line idea (the AI writes the whole film from it)"
+        default: "An old lighthouse robot who has kept the light alive alone for 100 years meets a lost little robot during a storm"
+      minutes:
+        description: "Film length in minutes (4-5)"
+        default: "4.5"
+      quality:
+        description: "stills = one picture per shot (~15 min, check the story first) | draft = 540p fast | final = 1080p"
+        type: choice
+        options: [stills, draft, final]
+        default: final
+
+permissions:
+  contents: read
+
+env:
+  BLENDER_URL: https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz
+  BLENDER: /opt/blender-4.2.3-linux-x64/blender
+  CHUNKS: 20
+
+jobs:
+  write:   # story, shot list, voices (and a real vehicle model if the story has one)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6 && pip install httpx edge-tts
+      - run: curl -sL "$BLENDER_URL" | tar -xJ -C /opt
+      - uses: actions/cache@v4
+        with: {path: cache, key: objaverse-index-v1}
+      - env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          IDEA: ${{ inputs.idea }}
+        run: python studio/film/writer.py assets "${{ inputs.genre }}" "$IDEA" "${{ inputs.minutes }}"
+      - run: cat assets/script.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: {name: film-assets, path: assets/, retention-days: 2}
+
+  render:  # 20 computers each render one slice of the film at the same time
+    needs: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    strategy:
+      fail-fast: false
+      matrix: {chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: film-assets, path: assets}
+      - run: |
+          sudo apt-get update && sudo apt-get install -y libxi6 libxxf86vm1 libxfixes3 libxrender1 libgl1 libxkbcommon0 libsm6
+          curl -sL "$BLENDER_URL" | tar -xJ -C /opt
+      - env:
+          FILM_STILLS: ${{ inputs.quality == 'stills' && '1' || '' }}
+        run: $BLENDER -b -noaudio -P studio/film/shots.py -- ${{ matrix.chunk }} $CHUNKS assets ${{ inputs.quality == 'final' && 'final' || 'draft' }}
+      - uses: actions/upload-artifact@v4
+        with: {name: "film-frames-${{ matrix.chunk }}", path: assets/frames/, retention-days: 2}
+
+  assemble:
+    needs: render
+    if: ${{ !cancelled() }}   # a failed slice is patched with neighbouring frames
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: film-assets, path: assets}
+      - uses: actions/download-artifact@v4
+        with: {pattern: "film-frames-*", path: frames, merge-multiple: true}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
+      - name: Contact sheet (stills)
+        if: inputs.quality == 'stills'
+        run: |
+          mkdir -p film && cp assets/script.txt film/
+          ffmpeg -y -pattern_type glob -i 'frames/*.jpg' -vf "scale=640:-1,tile=4x6" film/shots_%02d.jpg
+      - name: Edit the film and the Short
+        if: inputs.quality != 'stills'
+        run: python studio/film/assemble.py assets frames film
+      - uses: actions/upload-artifact@v4
+        with: {name: short-film, path: film/, retention-days: 7}
