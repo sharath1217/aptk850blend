@@ -1,0 +1,66 @@
+name: AI test (Kaggle GPU + Wan 2.2 + Kokoro)
+
+on:
+  workflow_dispatch:
+    inputs:
+      line:
+        description: "What Ben says in the test"
+        default: "Every big journey starts with one small step. Let's explore together!"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng && pip install kaggle kokoro soundfile
+      - name: Voice (Kokoro, open-source)
+        env: {LINE: "${{ inputs.line }}"}
+        run: |
+          python - <<'PY'
+          import os, numpy as np, soundfile as sf
+          from kokoro import KPipeline
+          p = KPipeline(lang_code="a")
+          audio = np.concatenate([a for _, _, a in p(os.environ["LINE"], voice="am_michael")])
+          sf.write("voice.wav", audio, 24000)
+          PY
+      - name: Send the job to Kaggle's free GPU
+        run: |
+          mkdir -p k && cd k
+          python - <<'PY'
+          import json, os
+          shots = open("../studio/ai/test_shots.json").read()
+          code = open("../studio/ai/kaggle_wan.py").read()
+          code = code.replace('json.loads(os.environ.get("SHOTS_JSON", "[]"))', "json.loads(" + repr(shots) + ")")
+          open("run.py", "w").write(code)
+          json.dump({"id": f"{os.environ['KAGGLE_USERNAME']}/getyr-wan-test", "title": "getyr-wan-test",
+                     "code_file": "run.py", "language": "python", "kernel_type": "script",
+                     "is_private": True, "enable_gpu": True, "enable_internet": True,
+                     "dataset_sources": [], "competition_sources": [], "kernel_sources": []},
+                    open("kernel-metadata.json", "w"))
+          PY
+          kaggle kernels push -p .
+      - name: Wait for the GPU to finish
+        run: |
+          for i in $(seq 1 280); do
+            S=$(kaggle kernels status "$KAGGLE_USERNAME/getyr-wan-test" 2>&1 | tail -1); echo "$(date +%T) $S"
+            case "$S" in *complete*|*COMPLETE*) break;; *error*|*ERROR*|*cancel*|*CANCEL*) kaggle kernels output "$KAGGLE_USERNAME/getyr-wan-test" -p out || true; cat out/*.log 2>/dev/null | tail -60; exit 1;; esac
+            sleep 60
+          done
+          kaggle kernels output "$KAGGLE_USERNAME/getyr-wan-test" -p out
+          ls -la out; tail -30 out/*.log 2>/dev/null || true
+      - name: Put voice + clip together
+        run: |
+          ffmpeg -y -i out/clip_000.mp4 -i voice.wav -filter_complex "[1:a]adelay=500|500,apad[a]" -map 0:v -map "[a]" \
+            -c:v libx264 -crf 19 -pix_fmt yuv420p -c:a aac -shortest ben_test.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: ai-test, path: "ben_test.mp4\nout/\nvoice.wav", retention-days: 7, if-no-files-found: ignore}
