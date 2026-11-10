@@ -419,7 +419,79 @@ def weather(kind, focus, n):
 
 
 # ---------------------------------------------------------------- robots
+def human(c):
+    """Stylised 3D person built from the character sheet (Ben: curly black hair, white tee,
+    black hoodie with blue accents, black cargo pants, white sneakers, backpack, smartwatch)."""
+    o = c.get("look", {})
+    skin = mat(f"skin_{c['id']}", tuple(o.get("skin", (0.55, 0.36, 0.25))), 0.55)
+    skin.node_tree.nodes["Principled BSDF"].inputs["Subsurface Weight"].default_value = 0.2
+    hairm = mat(f"hair_{c['id']}", tuple(o.get("hair", (0.012, 0.01, 0.01))), 0.45)
+    top = mat(f"hoodie_{c['id']}", tuple(o.get("jacket", (0.02, 0.02, 0.025))), 0.7)
+    accent = mat(f"accent_{c['id']}", tuple(o.get("accent", (0.05, 0.4, 1.0))), 0.3, emit=2.0)
+    tee = mat(f"tee_{c['id']}", tuple(o.get("shirt", (0.85, 0.85, 0.83))), 0.8)
+    pants = mat(f"pants_{c['id']}", tuple(o.get("pants", (0.03, 0.03, 0.035))), 0.8)
+    shoe = mat(f"shoe_{c['id']}", tuple(o.get("shoes", (0.9, 0.9, 0.9))), 0.5)
+    white = mat(f"eyew_{c['id']}", (0.9, 0.9, 0.88), 0.3)
+    iris = mat(f"eye_{c['id']}", (0.05, 0.03, 0.02), 0.1, emit=0.0)
+    mouth = mat(f"mouth_{c['id']}", (0.12, 0.03, 0.03), 0.5)
+    rng = random.Random(c["id"])
+    leg_h, torso_h = 0.86, 0.6
+    root = empty(f"bot_{c['id']}")
+    hips = empty("hips", (0, 0, leg_h), root)
+    # torso: open hoodie over a white tee
+    prim("cylinder", (0, 0, torso_h / 2), (0.2, 0.13, torso_h / 2), material=top, parent=hips, vertices=24)
+    prim("cube", (0, -0.115, torso_h * 0.55), (0.07, 0.03, torso_h * 0.42), material=tee, parent=hips)
+    for sx in (-1, 1):
+        prim("cube", (sx * 0.085, -0.13, torso_h * 0.5), (0.008, 0.005, torso_h * 0.42), material=accent, parent=hips)
+    prim("torus", (0, 0.06, torso_h + 0.02), (1, 0.8, 0.6), material=top, parent=hips, major_radius=0.13, minor_radius=0.05)
+    if o.get("backpack", True):
+        bp = mat(f"bag_{c['id']}", (0.015, 0.015, 0.02), 0.6)
+        prim("cube", (0, 0.2, torso_h * 0.5), (0.16, 0.08, 0.22), material=bp, parent=hips, bevel=0.04)
+        prim("cube", (0, 0.285, torso_h * 0.5), (0.025, 0.003, 0.12), material=accent, parent=hips)
+    neck = empty("neck", (0, 0, torso_h + 0.02), hips)
+    prim("cylinder", (0, 0, 0.04), (0.05, 0.05, 0.05), material=skin, parent=neck)
+    head = empty("head", (0, 0, 0.08), neck)
+    prim("uv_sphere", (0, 0, 0.12), (0.105, 0.115, 0.13), material=skin, parent=head)     # head
+    prim("uv_sphere", (0, -0.02, 0.04), (0.08, 0.08, 0.07), material=skin, parent=head)   # jaw
+    prim("uv_sphere", (0, -0.115, 0.1), (0.018, 0.02, 0.025), material=skin, parent=head)  # nose
+    for sx in (-1, 1):
+        prim("uv_sphere", (sx * 0.105, 0, 0.11), (0.018, 0.025, 0.03), material=skin, parent=head)  # ears
+    eyes = []
+    for sx in (-1, 1):
+        prim("uv_sphere", (sx * 0.042, -0.098, 0.135), (0.024, 0.012, 0.02), material=white, parent=head, segments=16, ring_count=8)
+        eyes.append(prim("uv_sphere", (sx * 0.042, -0.108, 0.135), (0.012, 0.006, 0.014), material=iris, parent=head, segments=12, ring_count=8))
+        prim("cube", (sx * 0.044, -0.104, 0.17), (0.026, 0.006, 0.006), rot=(0, sx * -0.12, 0), material=hairm, parent=head)  # brows
+    prim("cube", (0, -0.1, 0.06), (0.022, 0.004, 0.004), rot=(0, 0, 0), material=mouth, parent=head)
+    # curly hair: many small spheres over the top, sides and back
+    for k in range(70):
+        th, ph = rng.uniform(0, 2 * math.pi), rng.uniform(0, math.radians(100))
+        x, y, z = math.sin(ph) * math.cos(th), math.sin(ph) * math.sin(th), math.cos(ph)
+        if y < -0.45 and z < 0.55:
+            continue  # keep the face clear
+        r = rng.uniform(0.032, 0.045)
+        prim("uv_sphere", (x * 0.115, y * 0.12 - 0.01, 0.13 + z * 0.12), (r, r, r), material=hairm, parent=head, segments=8, ring_count=6)
+    arms, legs = [], []
+    for sx in (-1, 1):
+        a = empty("arm", (sx * 0.24, 0, torso_h - 0.05), hips)
+        prim("uv_sphere", (0, 0, 0), (0.065, 0.065, 0.065), material=top, parent=a)
+        prim("cylinder", (0, 0, -0.27), (0.05, 0.05, 0.26), material=top, parent=a, vertices=16)
+        prim("cylinder", (0, -0.002, -0.26), (0.052, 0.052, 0.012), material=accent, parent=a, vertices=16)
+        prim("uv_sphere", (0, 0, -0.57), (0.04, 0.03, 0.055), material=skin, parent=a)  # hand
+        if sx == -1:
+            prim("cylinder", (0, 0, -0.5), (0.048, 0.048, 0.018), material=mat(f"watch_{c['id']}", (0.02, 0.02, 0.02), 0.2, 0.6), parent=a)
+        arms.append(a)
+        lg = empty("leg", (sx * 0.1, 0, 0), hips)
+        prim("cylinder", (0, 0, -leg_h / 2 + 0.03), (0.07, 0.07, leg_h / 2 - 0.03), material=pants, parent=lg, vertices=16)
+        prim("cube", (sx * 0.07, 0, -0.38), (0.012, 0.05, 0.07), material=pants, parent=lg)  # cargo pocket
+        prim("cube", (0, -0.05, -leg_h + 0.04), (0.06, 0.13, 0.045), material=shoe, parent=lg, bevel=0.03)
+        legs.append(lg)
+    return dict(root=root, hips=hips, head=head, neck=neck, arms=arms, legs=legs, eyes=eyes,
+                eye=iris, mouth=mouth, height=leg_h + torso_h + 0.35, human=True)
+
+
 def robot(c, story_lines, n, slot_count):
+    if c.get("kind") == "human":
+        return human(c)
     col = COLORS.get(c["color"], COLORS["orange"]); shape = c.get("shape", "box")
     body = mat(f"body_{c['id']}", col, 0.3, 0.55); dark = mat(f"joint_{c['id']}", (0.06, 0.06, 0.07), 0.4, 0.8)
     eye = mat(f"eye_{c['id']}", (0.4, 0.95, 1.0), emit=12)
@@ -492,7 +564,7 @@ def animate(bot, action, start, facing, n, talk):
     sp = SPEED.get(action, 0) / FPS
     dirv = Vector((math.cos(facing + math.pi / 2), math.sin(facing + math.pi / 2), 0)) * -1  # robot front = -Y
     eye_n = bot["eye"].node_tree.nodes["Principled BSDF"]; m_n = bot["mouth"].node_tree.nodes["Principled BSDF"]
-    if action == "sad":
+    if action == "sad" and not bot.get("human"):
         eye_n.inputs["Emission Color"].default_value = (0.2, 0.35, 1.0, 1)
         eye_n.inputs["Emission Strength"].default_value = 5
     for f in range(0, n + 1, 2):
@@ -541,12 +613,13 @@ def animate(bot, action, start, facing, n, talk):
             arms[i].keyframe_insert("rotation_euler", frame=fr); legs[i].keyframe_insert("rotation_euler", frame=fr)
         for o, p in ((r, "location"), (r, "rotation_euler"), (hips, "location"), (hips, "rotation_euler"), (neck, "rotation_euler")):
             o.keyframe_insert(p, frame=fr)
-        m_n.inputs["Emission Strength"].default_value = (8 + 6 * math.sin(t * 25)) if speaking else 0.5
+        m_n.inputs["Emission Strength"].default_value = ((8 + 6 * math.sin(t * 25)) if speaking else 0.5) * (0.0 if bot.get("human") else 1)
         m_n.inputs["Emission Strength"].keyframe_insert("default_value", frame=fr)
     # blink
     for e in bot["eyes"]:
+        z0 = e.scale.z
         for f in range(int(FPS * 1.5), n, int(FPS * 3.1)):
-            for df, s in ((0, 0.045), (2, 0.005), (4, 0.045)):
+            for df, s in ((0, z0), (2, z0 * 0.1), (4, z0)):
                 e.scale.z = s; e.keyframe_insert("scale", index=2, frame=f + df + 1)
     return lambda f: Vector(start) + dirv * sp * f
 

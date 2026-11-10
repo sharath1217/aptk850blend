@@ -1,37 +1,163 @@
 {
  "_about": "The permanent cast of GetYr Studio. Every series uses ONLY these characters, so they always look and sound the same. Edit freely: color (orange blue red green yellow purple white pink), shape (box round tall), accessory (none cap goggles bowtie headphones scarf), voice = an Edge TTS voice name.",
  "characters": [
-  {"id": "turbo", "name": "Turbo", "color": "red", "shape": "box", "accessory": "goggles", "voice": "en-US-GuyNeural",
-   "role": "hero", "personality": "young, fearless, impatient underdog racing driver who talks fast and dreams big",
-   "want": "to prove a small family team can beat the champions", "flaw": "rushes in without thinking",
-   "catchphrase": "Full throttle, no regrets!"},
-  {"id": "gramps", "name": "Gramps", "color": "white", "shape": "tall", "accessory": "cap", "voice": "en-GB-RyanNeural",
-   "role": "mentor", "personality": "old retired champion, now Turbo's chief mechanic; calm, wise, dry humour",
-   "want": "to see Turbo win the right way", "flaw": "hides an old secret about his last race",
-   "catchphrase": "Races are won in the garage, kid."},
-  {"id": "pixel", "name": "Pixel", "color": "yellow", "shape": "round", "accessory": "headphones", "voice": "en-US-AnaNeural",
-   "role": "sidekick", "personality": "tiny, cheerful race engineer and data genius; funny and loyal",
-   "want": "to be taken seriously by the grown-up bots", "flaw": "talks too much when nervous",
-   "catchphrase": "Numbers don't lie!"},
-  {"id": "vega", "name": "Vega", "color": "purple", "shape": "tall", "accessory": "scarf", "voice": "en-GB-SoniaNeural",
-   "role": "rival", "personality": "elegant, ice-cold reigning champion of the rich Apex team; secretly lonely",
-   "want": "to stay number one at any cost", "flaw": "pride; can't admit she is afraid to lose",
-   "catchphrase": "Second place is just the first loser."},
-  {"id": "brick", "name": "Brick", "color": "green", "shape": "box", "accessory": "none", "voice": "en-US-DavisNeural",
-   "role": "villain", "personality": "big, scheming owner of the Apex team who bends the rules",
-   "want": "to buy the championship and shut down small teams", "flaw": "underestimates everyone",
-   "catchphrase": "Everything has a price."},
-  {"id": "sky", "name": "Sky", "color": "blue", "shape": "round", "accessory": "bowtie", "voice": "en-US-JennyNeural",
-   "role": "friend", "personality": "warm race commentator and Turbo's best friend; brave and honest",
-   "want": "to tell the true story of the championship", "flaw": "trusts too easily",
-   "catchphrase": "And what a moment this is!"},
-  {"id": "nitro", "name": "Nitro", "color": "orange", "shape": "box", "accessory": "cap", "voice": "en-AU-WilliamNeural",
-   "role": "wildcard", "personality": "funny, reckless driver who switches sides; chaotic but good-hearted",
-   "want": "fame and the loudest cheers", "flaw": "can't be trusted under pressure",
-   "catchphrase": "Watch this, mates!"},
-  {"id": "rosa", "name": "Rosa", "color": "pink", "shape": "round", "accessory": "goggles", "voice": "en-US-AriaNeural",
-   "role": "newcomer", "personality": "brilliant new rookie driver, quiet, determined, mysterious past",
-   "want": "to find out who she really is", "flaw": "keeps everyone at a distance",
-   "catchphrase": "Watch the road, not me."}
+  {
+   "id": "ben",
+   "name": "Ben",
+   "kind": "human",
+   "color": "blue",
+   "shape": "tall",
+   "accessory": "none",
+   "voice": "en-IN-PrabhatNeural",
+   "role": "hero",
+   "age": 20,
+   "personality": "20-year-old innovator and explorer; curious, calm and confident, smart, friendly, a problem solver who loves adventure, technology, building cool projects, good food and music",
+   "want": "to explore, invent and build something that matters",
+   "flaw": "takes on too much by himself",
+   "catchphrase": "Let's explore together!",
+   "look": {
+    "skin": [
+     0.55,
+     0.36,
+     0.25
+    ],
+    "hair": [
+     0.012,
+     0.01,
+     0.01
+    ],
+    "jacket": [
+     0.02,
+     0.02,
+     0.025
+    ],
+    "accent": [
+     0.05,
+     0.4,
+     1.0
+    ],
+    "shirt": [
+     0.85,
+     0.85,
+     0.83
+    ],
+    "pants": [
+     0.03,
+     0.03,
+     0.035
+    ],
+    "shoes": [
+     0.9,
+     0.9,
+     0.9
+    ],
+    "backpack": true
+   },
+   "reference": "characters/ben/sheet.jpg"
+  },
+  {
+   "id": "turbo",
+   "name": "Turbo",
+   "color": "red",
+   "shape": "box",
+   "accessory": "goggles",
+   "voice": "en-US-GuyNeural",
+   "role": "hero",
+   "personality": "young, fearless, impatient underdog racing driver who talks fast and dreams big",
+   "want": "to prove a small family team can beat the champions",
+   "flaw": "rushes in without thinking",
+   "catchphrase": "Full throttle, no regrets!"
+  },
+  {
+   "id": "gramps",
+   "name": "Gramps",
+   "color": "white",
+   "shape": "tall",
+   "accessory": "cap",
+   "voice": "en-GB-RyanNeural",
+   "role": "mentor",
+   "personality": "old retired champion, now Turbo's chief mechanic; calm, wise, dry humour",
+   "want": "to see Turbo win the right way",
+   "flaw": "hides an old secret about his last race",
+   "catchphrase": "Races are won in the garage, kid."
+  },
+  {
+   "id": "pixel",
+   "name": "Pixel",
+   "color": "yellow",
+   "shape": "round",
+   "accessory": "headphones",
+   "voice": "en-US-AnaNeural",
+   "role": "sidekick",
+   "personality": "tiny, cheerful race engineer and data genius; funny and loyal",
+   "want": "to be taken seriously by the grown-up bots",
+   "flaw": "talks too much when nervous",
+   "catchphrase": "Numbers don't lie!"
+  },
+  {
+   "id": "vega",
+   "name": "Vega",
+   "color": "purple",
+   "shape": "tall",
+   "accessory": "scarf",
+   "voice": "en-GB-SoniaNeural",
+   "role": "rival",
+   "personality": "elegant, ice-cold reigning champion of the rich Apex team; secretly lonely",
+   "want": "to stay number one at any cost",
+   "flaw": "pride; can't admit she is afraid to lose",
+   "catchphrase": "Second place is just the first loser."
+  },
+  {
+   "id": "brick",
+   "name": "Brick",
+   "color": "green",
+   "shape": "box",
+   "accessory": "none",
+   "voice": "en-US-DavisNeural",
+   "role": "villain",
+   "personality": "big, scheming owner of the Apex team who bends the rules",
+   "want": "to buy the championship and shut down small teams",
+   "flaw": "underestimates everyone",
+   "catchphrase": "Everything has a price."
+  },
+  {
+   "id": "sky",
+   "name": "Sky",
+   "color": "blue",
+   "shape": "round",
+   "accessory": "bowtie",
+   "voice": "en-US-JennyNeural",
+   "role": "friend",
+   "personality": "warm race commentator and Turbo's best friend; brave and honest",
+   "want": "to tell the true story of the championship",
+   "flaw": "trusts too easily",
+   "catchphrase": "And what a moment this is!"
+  },
+  {
+   "id": "nitro",
+   "name": "Nitro",
+   "color": "orange",
+   "shape": "box",
+   "accessory": "cap",
+   "voice": "en-AU-WilliamNeural",
+   "role": "wildcard",
+   "personality": "funny, reckless driver who switches sides; chaotic but good-hearted",
+   "want": "fame and the loudest cheers",
+   "flaw": "can't be trusted under pressure",
+   "catchphrase": "Watch this, mates!"
+  },
+  {
+   "id": "rosa",
+   "name": "Rosa",
+   "color": "pink",
+   "shape": "round",
+   "accessory": "goggles",
+   "voice": "en-US-AriaNeural",
+   "role": "newcomer",
+   "personality": "brilliant new rookie driver, quiet, determined, mysterious past",
+   "want": "to find out who she really is",
+   "flaw": "keeps everyone at a distance",
+   "catchphrase": "Watch the road, not me."
+  }
  ]
 }
