@@ -78,7 +78,21 @@ Return the treatment only.""", temperature=0.9)
 def write_story(genre: str, idea: str, minutes: float) -> dict:
     n_shots = int(minutes * 60 / 7.5)
     story_text = treatment(genre, idea, minutes)
-    log("TREATMENT:\n" + story_text)
+    log("TREATMENT (draft):\n" + story_text)
+    # Story editor pass: a tough script doctor critiques the draft and rewrites it stronger
+    story_text = llm(f"""You are a demanding story editor at an animation studio.
+{CONTEXT}
+DRAFT TREATMENT:
+{story_text}
+
+First, silently check it: Is the hook intriguing in the first 10 seconds? Does the hero want something
+specific, and is there a real obstacle? Are the stakes clear and personal? Is there a surprising but fair
+twist? Does the climax come from the characters' choices (not luck)? Does the ending pay off the opening
+emotionally? Are characters consistent with the series bible and previous episodes (if any)? Is every
+beat something that can be SHOWN with the available sets and actions?
+Then rewrite the treatment fixing every weakness, keeping the same 8-beat format.
+Return ONLY the improved treatment.""", temperature=0.7)
+    log("TREATMENT (edited):\n" + story_text)
     prompt = f"""You are a film director and cinematographer turning this treatment into a {minutes:.0f}-minute
 animated short film. Genre: {GENRE_HINT.get(genre, genre)}.
 
