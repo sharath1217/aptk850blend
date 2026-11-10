@@ -575,7 +575,7 @@ def camera(shot, focus, scale, n, rng, ots):
         if kind == "track":
             return Vector((-0.6 * side, -4.2, 1.25)) * S
         if kind == "closeup":
-            return Vector((0.25 * side, -1.9 + 0.2 * u, 1.25)) * S
+            return Vector((0.3 * side, -2.6 + 0.25 * u, 1.5)) * S
         if kind == "low_angle":
             return Vector((1.2 * side, -2.8 - 0.4 * u, 0.25)) * S
         if kind == "crane_up":
@@ -591,7 +591,11 @@ def camera(shot, focus, scale, n, rng, ots):
             "top_down": 32, "orbit": 35, "push_in": 40, "track": 35, "handheld": 32}[kind]
     fstop = {"closeup": 2.0, "over_shoulder": 2.8, "push_in": 3.5}.get(kind, 6.0)
     cd.lens = lens; cd.dof.use_dof = kind != "establish"; cd.dof.focus_object = tgt; cd.dof.aperture_fstop = fstop
-    tgt.location = (0, 0, (0.3 if kind == "establish" else 0.0))
+    tgt.location = (0, 0, {"establish": 0.3, "closeup": 0.3, "over_shoulder": 0.2}.get(kind, 0.0) * S)
+    if kind in ("closeup", "push_in", "handheld", "low_angle", "track"):
+        # rule of thirds: put the subject a sixth of the frame off-centre, looking into the open side
+        width = path(0.5).length * 36 / lens
+        tgt.location.x = side * width / 6
     cam.parent = focus
     for f in range(0, n + 1, 3):
         u = f / max(n, 1); u = u * u * (3 - 2 * u)

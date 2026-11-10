@@ -50,11 +50,41 @@ def llm(prompt: str, temperature: float = 0.8) -> str:
     raise SystemExit("LLM unavailable")
 
 
+def treatment(genre: str, idea: str, minutes: float) -> str:
+    """Pass 1: a proper story (structure, character arcs, set pieces) before any camera talk."""
+    return llm(f"""You are an award-winning animation screenwriter (think Pixar shorts).
+Write the story treatment for a {minutes:.0f}-minute animated short. Genre: {GENRE_HINT.get(genre, genre)}.
+Idea: {idea}
+All characters are expressive stylised robots (2-4 of them), each with a name, a want, a flaw and a
+distinct way of talking. Places available: coast with a lighthouse, night city, alien planet,
+cartoon toytown, a cosy room, a forest (day, dusk or night; rain, snow or fog).
+Structure it in 8 beats, 2-4 sentences each:
+1 HOOK (an intriguing first image)  2 SETUP (who, where, what they want)  3 INCITING INCIDENT
+4 RISING ACTION (obstacles, a funny or touching moment)  5 MIDPOINT TWIST  6 LOWEST POINT
+7 CLIMAX (the big visual set piece)  8 RESOLUTION (an emotional final image that echoes the hook).
+Show, don't tell: favour actions and visuals over talk. Make the ending land emotionally.
+Return the treatment only.""", temperature=0.9)
+
+
 def write_story(genre: str, idea: str, minutes: float) -> dict:
     n_shots = int(minutes * 60 / 7.5)
-    prompt = f"""You are a film director writing a {minutes:.0f}-minute animated short film.
-Genre: {GENRE_HINT.get(genre, genre)}.
-Idea: {idea}
+    story_text = treatment(genre, idea, minutes)
+    log("TREATMENT:\n" + story_text)
+    prompt = f"""You are a film director and cinematographer turning this treatment into a {minutes:.0f}-minute
+animated short film. Genre: {GENRE_HINT.get(genre, genre)}.
+
+TREATMENT:
+{story_text}
+
+DIRECTING RULES (follow them, they make the film look professional):
+- Open every new location or time of day with an "establish" or "crane_up" shot.
+- Dialogue between two characters: alternate "over_shoulder" and "closeup" (shot / reverse shot).
+- Emotional moments (sad, surprise, decisions): "closeup" or "push_in".
+- Movement (walk, run, chases, flying): "track", "handheld" or "low_angle".
+- Heroic or big reveal moments: "low_angle" or "orbit". Endings: "crane_up" or "establish".
+- Never use the same camera twice in a row. Vary shot lengths: quick 3-4 s shots in action, 6-9 s in calm moments.
+- Use weather and time of day for mood (rain/night for danger, dusk for emotion, day for joy).
+- Let images speak: about a third of the shots have no dialogue.
 
 The film MUST have AT LEAST {n_shots} shots (each 4-10 seconds, numbered in your head 1..{n_shots}) - a short
 list is useless; write every shot with a clear
@@ -151,6 +181,33 @@ def clean(story: dict) -> dict:
                       "hook": sh.get("hook", story.get("title", ""))}}
 
 
+def direct(story: dict) -> None:
+    """Director's pass in code: fixes the camera grammar the LLM sometimes forgets."""
+    prev = None
+    for i, s in enumerate(story["shots"]):
+        new_place = prev is None or (s["set"], s["time"]) != (prev["set"], prev["time"])
+        speakers = {l["speaker"] for l in s["lines"]} - {"narrator"}
+        acts = {c["action"] for c in s["characters"]}
+        if new_place and s["vehicle"] == "none" and s["camera"] not in ("establish", "crane_up"):
+            s["camera"] = "establish"
+        elif s["vehicle"] in ("car_chase", "car_drive") and s["camera"] in ("closeup", "over_shoulder", "top_down"):
+            s["camera"] = "track"
+        elif len(s["characters"]) == 2 and speakers and s["camera"] in ("establish", "top_down", "crane_up") and not new_place:
+            s["camera"] = "over_shoulder"
+        elif acts & {"sad", "fall"} and s["camera"] in ("establish", "top_down"):
+            s["camera"] = "closeup"
+        if prev and s["camera"] == prev["camera"]:  # never the same camera twice in a row
+            alt = {"over_shoulder": "closeup", "closeup": "over_shoulder" if len(s["characters"]) == 2 else "push_in",
+                   "track": "handheld", "handheld": "low_angle", "establish": "push_in"}
+            s["camera"] = alt.get(s["camera"], "push_in" if s["camera"] != "push_in" else "orbit")
+        if s["camera"] == "over_shoulder" and len(s["characters"]) < 2:
+            s["camera"] = "closeup"
+        prev = s
+    last = story["shots"][-1]
+    if last["camera"] not in ("crane_up", "establish"):
+        last["camera"] = "crane_up"
+
+
 def duration(f: Path) -> float:
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of",
                                  "csv=p=0", str(f)], capture_output=True, text=True, check=True).stdout)
@@ -217,6 +274,7 @@ def main() -> None:
     log("Genre:", genre, "| Idea:", idea)
     minutes = float(sys.argv[4]) if len(sys.argv) > 4 else 4.5
     story = clean(write_story(genre, idea, minutes))
+    direct(story)
     story["genre"], story["idea"] = genre, idea
     voice_and_time(story, out, minutes)
     vm = str(story.get("vehicle_model", "none"))
