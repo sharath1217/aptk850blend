@@ -310,30 +310,39 @@ THEME = os.environ.get("SERIES_THEME", "a robot motor-racing championship: a you
                        "their small family team, and a fierce rival team - every episode builds to a race")
 
 
+LIBRARY = Path(__file__).with_name("characters.json")
+
+
+def library() -> dict:
+    """The permanent cast (characters.json): same looks, voices and personalities in every series."""
+    chars = json.loads(LIBRARY.read_text())["characters"]
+    return {c["id"]: dict(c, slot=i) for i, c in enumerate(chars)}
+
+
 def series_bible() -> dict:
-    """Created once by the AI, then kept forever: same characters, looks and voices every episode."""
+    """Created once by the AI, then kept forever. The cast always comes from characters.json."""
     f = SERIES / "bible.json"
+    lib = library()
     if f.exists():
-        return json.loads(f.read_text())
-    b = ask_json(f"""Create an original animated web SERIES about stylised robots that can run for many
-episodes (heart, humour, rivalry and thrilling action, family friendly). Theme: {THEME}.
-The characters' colours are also their race-car colours. Return ONLY JSON:
+        b = json.loads(f.read_text())
+    else:
+        roster = "\n".join(f"- {c['id']}: {c['name']}, {c['role']}, {c['personality']}" for c in lib.values())
+        b = ask_json(f"""Create an original animated web SERIES (heart, humour, rivalry and thrilling action,
+family friendly). Theme: {THEME}.
+You MUST use characters from this permanent cast (pick the 4-6 that fit best; do not invent new ones):
+{roster}
+Return ONLY JSON:
 {{"series_title": "...", "premise": "2 sentences", "world": "where they live, 2 sentences",
-  "home_set": one of {VOCAB['set']}, "tone": "...",
-  "cast": [{{"id": "lowercase", "name": "...", "color": one of {list(COLORS_HINT)}, "shape": "box|round|tall",
-            "voice": "male|female|child|old", "personality": "...", "want": "...", "flaw": "...",
-            "catchphrase": "..."}}],
-  "season_arc": "the big story that unfolds over the first 10 episodes"}}
-3 or 4 cast members with very different looks (different colours AND shapes) and personalities.""")
-    cast = clean({"cast": b.get("cast", []), "shots": []})["cast"]
-    for c, raw in zip(cast.values(), b.get("cast", [])):
-        for k in ("want", "flaw", "catchphrase"):
-            c[k] = raw.get(k, "")
-    b["cast"] = cast
-    if b.get("home_set") not in VOCAB["set"]:
-        b["home_set"] = "coast"
-    SERIES.mkdir(parents=True, exist_ok=True); f.write_text(json.dumps(b, indent=1))
-    log("NEW SERIES:", b.get("series_title"))
+  "home_set": one of {VOCAB['set']}, "tone": "...", "cast_ids": ["turbo", "..."],
+  "season_arc": "the big story that unfolds over the first 10 episodes"}}""")
+        if b.get("home_set") not in VOCAB["set"]:
+            b["home_set"] = "racetrack"
+        SERIES.mkdir(parents=True, exist_ok=True)
+    ids = [i for i in b.get("cast_ids", []) if i in lib] or list(lib)[:5]
+    b["cast_ids"] = ids
+    b["cast"] = {i: lib[i] for i in ids}  # always fresh from the library (edits apply everywhere)
+    f.write_text(json.dumps({k: v for k, v in b.items() if k != "cast"}, indent=1))
+    log("SERIES:", b.get("series_title"), "| cast:", ", ".join(ids))
     return b
 
 
@@ -345,7 +354,7 @@ def series_episode() -> tuple[str, str, dict, int]:
     global CONTEXT
     b, hist = series_bible(), episodes()
     n = len(hist) + 1
-    cast_txt = "\n".join(f"- {c['name']} (id {c['id']}, {c['color']} {c['shape']} robot): {c['personality']}. "
+    cast_txt = "\n".join(f"- {c['name']} (id {c['id']}, {c['color']} {c['shape']} robot, {c['role']}): {c['personality']}. "
                          f"Wants: {c.get('want', '')}. Flaw: {c.get('flaw', '')}. Catchphrase: \"{c.get('catchphrase', '')}\""
                          for c in b["cast"].values())
     prev = "\n".join(f"Episode {e['n']} \"{e['title']}\": {e['summary']}" for e in hist[-6:]) or "(this is the pilot)"
@@ -383,7 +392,7 @@ def main() -> None:
                       f"characters and what changed:\n{json.dumps([l['text'] for s in story['shots'] for l in s['lines']])}\n"
                       f"Idea: {idea}", temperature=0.3).strip()
         d = out / "series" / "episodes"; d.mkdir(parents=True, exist_ok=True)
-        (out / "series" / "bible.json").write_text(json.dumps(bible, indent=1))
+        (out / "series" / "bible.json").write_text(json.dumps({k: v for k, v in bible.items() if k != "cast"}, indent=1))
         (d / f"ep{ep:03d}.json").write_text(json.dumps({"n": ep, "title": story["title"], "idea": idea,
                                                          "summary": summary}, indent=1))
     voice_and_time(story, out, minutes)

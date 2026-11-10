@@ -446,6 +446,30 @@ def robot(c, story_lines, n, slot_count):
     prim("cube", (0, -0.19, 0.14), (0.05, 0.008, 0.008), material=mouth, parent=head)
     prim("cylinder", (0.1, 0, 0.45), (0.01, 0.01, 0.08), material=dark, parent=head)
     prim("uv_sphere", (0.1, 0, 0.54), (0.03, 0.03, 0.03), material=eye, parent=head)
+    acc = c.get("accessory", "none"); top = 0.4 if shape == "round" else 0.37
+    if acc == "cap":
+        capm = mat(f"cap_{c['id']}", (0.08, 0.1, 0.25) if c["color"] != "blue" else (0.7, 0.1, 0.1), 0.6)
+        prim("uv_sphere", (0, 0, top), (0.23, 0.21, 0.09), material=capm, parent=head)
+        prim("cube", (0, -0.24, top - 0.01), (0.15, 0.09, 0.012), material=capm, parent=head)
+    elif acc == "goggles":
+        band = mat(f"band_{c['id']}", (0.1, 0.07, 0.05), 0.6)
+        prim("cube", (0, 0, top - 0.06), (0.235, 0.195, 0.025), material=band, parent=head)
+        lens = mat(f"lens_{c['id']}", (0.9, 0.6, 0.1), 0.05, 0.6)
+        for sx in (-1, 1):
+            prim("cylinder", (sx * 0.08, -0.2, top - 0.05), (0.055, 0.055, 0.03), rot=(math.pi / 2, 0, 0), material=lens, parent=head)
+    elif acc == "headphones":
+        hp = mat(f"hp_{c['id']}", (0.08, 0.08, 0.09), 0.3, 0.5)
+        prim("torus", (0, 0, 0.2), (1, 1, 1), rot=(0, math.pi / 2, 0), material=hp, parent=head, major_radius=0.25, minor_radius=0.02)
+        for sx in (-1, 1):
+            prim("cylinder", (sx * 0.25, 0, 0.2), (0.07, 0.07, 0.04), rot=(0, math.pi / 2, 0), material=hp, parent=head)
+    elif acc == "bowtie":
+        bt = mat(f"bt_{c['id']}", (0.75, 0.05, 0.1), 0.4)
+        for sx in (-1, 1):
+            prim("cone", (sx * 0.06, -0.08, 0.05), (0.05, 0.05, 0.06), rot=(0, sx * math.pi / 2, 0), material=bt, parent=neck, vertices=4)
+    elif acc == "scarf":
+        sf = mat(f"scarf_{c['id']}", (0.9, 0.85, 0.75) if c["color"] != "white" else (0.6, 0.1, 0.15), 0.9)
+        prim("torus", (0, 0, 0.03), (1, 1, 1.4), material=sf, parent=neck, major_radius=0.12, minor_radius=0.05)
+        prim("cube", (0.08, -0.12, -0.12), (0.05, 0.02, 0.14), rot=(0.2, 0, 0.1), material=sf, parent=neck)
     arms, legs = [], []
     for sx in (-1, 1):
         a = empty("arm", (sx * 0.3, 0, torso_h - 0.06), hips)
