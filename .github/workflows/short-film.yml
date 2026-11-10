@@ -1,8 +1,8 @@
 name: Short film
 
 on:
-  schedule:
-    - cron: "17 20 * * *"   # every day: the next episode of the series, written, rendered and published by itself
+  # schedule:   # paused: we are moving to the Kaggle + Wan 2.2 pipeline
+  #   - cron: "17 20 * * *"
   workflow_dispatch:
     inputs:
       mode:
