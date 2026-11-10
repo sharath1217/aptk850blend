@@ -397,7 +397,8 @@ def main() -> None:
                                                          "summary": summary}, indent=1))
     voice_and_time(story, out, minutes)
     vm = str(story.get("vehicle_model", "none"))
-    if any(s["vehicle"] != "none" for s in story["shots"]) and vm.lower() != "none" and os.environ.get("BLENDER"):
+    road = {"car_drive", "car_chase", "ship_fly", "ship_land"}  # race cars are built in Blender
+    if any(s["vehicle"] in road for s in story["shots"]) and vm.lower() != "none" and os.environ.get("BLENDER"):
         try:  # a real model for the hero vehicle; Blender builds one itself otherwise
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
             import asset_finder
