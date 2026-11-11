@@ -17,13 +17,21 @@ dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 vae = AutoencoderKLWan.from_pretrained(MODEL, subfolder="vae", torch_dtype=torch.float32)
 pipe = WanPipeline.from_pretrained(MODEL, vae=vae, torch_dtype=dtype)
 pipe.enable_model_cpu_offload()  # fits 16 GB cards (T4 / P100)
+# Older GPUs (T4) otherwise fall back to "math" attention, which needs 13+ GB at once.
+for backend in ("_native_efficient", "native"):
+    try:
+        pipe.transformer.set_attention_backend(backend); print("attention backend:", backend, flush=True); break
+    except Exception as exc:
+        print("backend", backend, "not available:", exc, flush=True)
+from torch.nn.attention import sdpa_kernel, SDPBackend
 pipe.vae.enable_tiling() if hasattr(pipe.vae, "enable_tiling") else None
 NEG = ("cartoon, anime, 3d render, cgi, blurry, low quality, deformed face, extra fingers, bad hands, "
        "text, watermark, logo, subtitles, oversaturated, static, frozen frame")
 os.makedirs("/kaggle/working", exist_ok=True)
 for i, s in enumerate(SHOTS):
     t = time.time()
-    frames = pipe(prompt=s["prompt"], negative_prompt=NEG, height=s.get("h", 480), width=s.get("w", 832),
+    with sdpa_kernel([SDPBackend.EFFICIENT_ATTENTION, SDPBackend.FLASH_ATTENTION]):
+      frames = pipe(prompt=s["prompt"], negative_prompt=NEG, height=s.get("h", 480), width=s.get("w", 832),
                   num_frames=s.get("frames", 121), guidance_scale=5.0, num_inference_steps=s.get("steps", 40),
                   generator=torch.Generator("cpu").manual_seed(s.get("seed", 42))).frames[0]
     import numpy as np
