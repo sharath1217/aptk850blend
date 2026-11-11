@@ -2,6 +2,7 @@
 (Apache 2.0 licence: free for commercial use, no watermark).
 Input: shots.json next to this script (embedded by the GitHub workflow). Output: /kaggle/working/clip_XXX.mp4"""
 import json, os, subprocess, sys, time
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", "-U", "diffusers>=0.35", "transformers", "accelerate",
                 "ftfy", "imageio", "imageio-ffmpeg", "sentencepiece"], check=True)
 import torch
@@ -22,9 +23,12 @@ NEG = ("cartoon, anime, 3d render, cgi, blurry, low quality, deformed face, extr
 os.makedirs("/kaggle/working", exist_ok=True)
 for i, s in enumerate(SHOTS):
     t = time.time()
-    frames = pipe(prompt=s["prompt"], negative_prompt=NEG, height=s.get("h", 704), width=s.get("w", 1280),
+    frames = pipe(prompt=s["prompt"], negative_prompt=NEG, height=s.get("h", 480), width=s.get("w", 832),
                   num_frames=s.get("frames", 121), guidance_scale=5.0, num_inference_steps=s.get("steps", 40),
                   generator=torch.Generator("cpu").manual_seed(s.get("seed", 42))).frames[0]
+    import numpy as np
+    print("frame brightness (0 = black / broken):", float(np.asarray(frames[len(frames) // 2]).mean()), flush=True)
     export_to_video(frames, f"/kaggle/working/clip_{i:03d}.mp4", fps=24)
+    torch.cuda.empty_cache()
     print(f"clip {i} done in {time.time() - t:.0f}s", flush=True)
 print("ALL DONE", flush=True)
