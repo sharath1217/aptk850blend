@@ -1,0 +1,81 @@
+name: Realistic scene (Blender vs AI)
+
+on:
+  workflow_dispatch:
+    inputs:
+      which:
+        description: "What to make"
+        type: choice
+        options: [both, blender, ai]
+        default: both
+
+permissions:
+  contents: read
+
+env:
+  KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+  KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN || (startsWith(secrets.KAGGLE_KEY, 'KGAT_') && secrets.KAGGLE_KEY || '') }}
+
+jobs:
+  blender:   # real car model (licence + vision checked) -> Kaggle GPU renders the Blender scene
+    if: inputs.which != 'ai'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -U kaggle six httpx
+      - name: Find a real car model
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          BLENDER: /opt/blender-4.2.3-linux-x64/blender
+        run: |
+          curl -sL https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz | tar -xJ -C /opt
+          python - <<'PY'
+          import sys; from pathlib import Path
+          sys.path.insert(0, "studio"); import asset_finder
+          got = asset_finder.find(Path("car"), "a realistic modern dark sports car or coupe, complete body with wheels",
+                                  "modern day, photorealistic", ["car", "sports car", "coupe", "supercar", "sedan"])
+          if not got: sys.exit("no good car model found")
+          Path("car/credit.txt").write_text(got["credit"] + "\n"); print(got["credit"])
+          PY
+      - uses: actions/upload-artifact@v4
+        with: {name: car-model, path: car/, retention-days: 7}
+      - name: Upload the car to Kaggle (private dataset)
+        run: |
+          mkdir -p ds && cp car/model.glb ds/car.glb && cp car/credit.txt ds/
+          echo "{\"title\": \"getyr-scene-assets\", \"id\": \"$KAGGLE_USERNAME/getyr-scene-assets\", \"licenses\": [{\"name\": \"other\"}]}" > ds/dataset-metadata.json
+          kaggle datasets version -p ds -m "car" --dir-mode zip || kaggle datasets create -p ds
+          sleep 90
+      - name: Render on Kaggle's GPU
+        run: python studio/ai/kaggle_job.py getyr-coast-blender studio/real/kaggle_render.py out getyr-scene-assets SCENE=studio/real/coast_scene.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: coast-blender, path: out/, retention-days: 7, if-no-files-found: ignore}
+
+  ai:        # the same scene made by the Wan 2.2 AI video model, for comparison
+    if: inputs.which != 'blender'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -U kaggle six
+      - name: Generate 3 clips on Kaggle's GPU
+        run: |
+          python - <<'PY'
+          s = open("studio/ai/kaggle_wan.py").read()
+          s = s.replace('json.loads(os.environ.get("SHOTS_JSON", "[]"))', 'json.loads(SHOTS)')
+          open("wan_job.py", "w").write(s)
+          PY
+          python studio/ai/kaggle_job.py getyr-coast-ai wan_job.py out SHOTS=studio/ai/coast_shots.json
+      - name: Join the clips
+        run: |
+          ls out/clip_*.mp4 | sed "s/^/file '/;s/$/'/" | sed "s|file '|file '$PWD/|" > list.txt
+          ffmpeg -y -f concat -safe 0 -i list.txt -vf "eq=contrast=1.03,drawbox=y=0:w=iw:h=ih*0.12:color=black:t=fill,drawbox=y=ih*0.88:w=iw:h=ih*0.12:color=black:t=fill" -c:v libx264 -crf 17 -pix_fmt yuv420p out/coast_ai.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: coast-ai, path: out/, retention-days: 7, if-no-files-found: ignore}
