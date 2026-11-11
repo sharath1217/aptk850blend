@@ -22,8 +22,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng && pip install -U "kaggle>=1.8" kokoro soundfile
+      - name: Install tools
+        timeout-minutes: 20
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng
+          pip install torch --index-url https://download.pytorch.org/whl/cpu   # small CPU build, the voice needs no GPU
+          pip install kokoro soundfile
+          pip install -U kaggle
       - name: Voice (Kokoro, open-source)
+        timeout-minutes: 15
         env: {LINE: "${{ inputs.line }}"}
         run: |
           python - <<'PY'
