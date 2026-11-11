@@ -355,7 +355,7 @@ sc.camera = c1
 sc.render.engine = "CYCLES"; sc.frame_start, sc.frame_end, sc.render.fps = 1, N, FPS
 prefs = bpy.context.preferences.addons["cycles"].preferences
 gpu = False
-for kind in ("OPTIX", "CUDA"):
+for kind in ("CUDA", "OPTIX"):  # CUDA first: Kaggle's driver can't create OptiX denoisers
     try:
         prefs.compute_device_type = kind; prefs.get_devices()
         devs = [d for d in prefs.devices if d.type == kind]
@@ -370,7 +370,8 @@ sc.cycles.samples = 16 if PREVIEW else int(os.environ.get("SAMPLES", 160))
 sc.cycles.use_adaptive_sampling = True; sc.cycles.adaptive_threshold = 0.02
 sc.cycles.use_denoising = True
 try:
-    sc.cycles.denoiser = "OPTIX" if gpu else "OPENIMAGEDENOISE"
+    sc.cycles.denoiser = "OPENIMAGEDENOISE"
+    sc.cycles.denoising_use_gpu = gpu
 except Exception:
     pass
 sc.cycles.max_bounces = 8

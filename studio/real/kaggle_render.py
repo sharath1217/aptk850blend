@@ -50,7 +50,7 @@ for g in glob.glob("/kaggle/input/*/*.glb") + glob.glob("/kaggle/input/*/*/*.glb
 # 3. render on the GPU (scene script is embedded below by the GitHub workflow)
 open("/kaggle/temp/scene.py", "w").write(SCENE)
 t = time.time()
-sh(f"{BL} -b -noaudio -P /kaggle/temp/scene.py -- {A} /kaggle/temp/frames 2>&1 | grep -E 'GPU|frame|car:|sky:|texture|Error|Traceback' ")
+sh(f"{BL} -b -noaudio -P /kaggle/temp/scene.py -- {A} /kaggle/temp/frames 2>&1 | grep -E 'GPU|frame|car:|sky:|texture|Error|Traceback' ; ls /kaggle/temp/frames | wc -l")
 print(f"render time: {(time.time() - t) / 60:.1f} min", flush=True)
 
 # 4. encode: gentle film grade, light grain, 2.39:1 cinema bars, ambient sound (wind + sea)
