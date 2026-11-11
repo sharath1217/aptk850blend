@@ -33,7 +33,9 @@ jobs:
           ffmpeg -version | head -1
           pip install torch --index-url https://download.pytorch.org/whl/cpu   # small CPU build, the voice needs no GPU
           pip install kokoro soundfile
-          pip install -U kaggle
+          pip install -U kaggle six
+          # new-style tokens (KGAT_...) work under either secret name
+          if [ -z "$KAGGLE_API_TOKEN" ] && [[ "$KAGGLE_KEY" == KGAT_* ]]; then echo "KAGGLE_API_TOKEN=$KAGGLE_KEY" >> "$GITHUB_ENV"; fi
       - name: Voice (Kokoro, open-source)
         timeout-minutes: 15
         env: {LINE: "${{ inputs.line }}"}
