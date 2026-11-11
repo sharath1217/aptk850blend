@@ -16,12 +16,13 @@ jobs:
     timeout-minutes: 300
     env:
       KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}              # old-style key (optional)
+      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}  # new-style access token
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.12"}
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng && pip install kaggle kokoro soundfile
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg espeak-ng && pip install -U "kaggle>=1.8" kokoro soundfile
       - name: Voice (Kokoro, open-source)
         env: {LINE: "${{ inputs.line }}"}
         run: |
