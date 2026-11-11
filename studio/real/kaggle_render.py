@@ -44,8 +44,15 @@ for kind, words, prefer in (("rock", ["rock"], ["rock_face", "aerial_rocks_02", 
         print("texture", kind, "->", tid)
     except Exception as exc:
         print("texture failed:", kind, exc)
-for g in glob.glob("/kaggle/input/*/*.glb") + glob.glob("/kaggle/input/*/*/*.glb"):
-    sh(f"cp '{g}' {A}/car.glb"); break
+sh("find /kaggle/input -maxdepth 6 | head -50 || true")  # show what Kaggle attached
+cars = [os.path.join(r, f) for r, _, fs in os.walk("/kaggle/input") for f in fs if f.lower().endswith(".glb")]
+if not cars and os.environ.get("CAR_URL", CAR_URL if "CAR_URL" in globals() else ""):
+    get(CAR_URL, f"{A}/car.glb"); cars = [f"{A}/car.glb"]
+if not cars:
+    raise SystemExit("NO CAR MODEL - refusing to render a stand-in")
+if cars[0] != f"{A}/car.glb":
+    sh(f"cp '{cars[0]}' {A}/car.glb")
+print("car file:", cars[0], flush=True)
 
 # 3. render on the GPU (scene script is embedded below by the GitHub workflow)
 open("/kaggle/temp/scene.py", "w").write(SCENE)
