@@ -44,6 +44,27 @@ for kind, words, prefer in (("rock", ["rock"], ["rock_face", "aerial_rocks_02", 
         print("texture", kind, "->", tid)
     except Exception as exc:
         print("texture failed:", kind, exc)
+# photo-scanned plants and rocks (Poly Haven models, CC0)
+def models(kind, words, n):
+    try:
+        allm = api("/assets?t=models")
+    except Exception as exc:
+        print("models list failed", exc); return
+    picks = [k for k, v in allm.items()
+             if any(w in " ".join(v.get("tags", []) + v.get("categories", []) + [k]).lower() for w in words)][:n]
+    for mid in picks:
+        try:
+            g = api(f"/files/{mid}")["gltf"]; res = "2k" if "2k" in g else sorted(g)[0]; g = g[res]["gltf"]
+            d = f"{A}/models/{kind}/{mid}"; os.makedirs(d, exist_ok=True)
+            get(g["url"], f"{d}/{mid}.gltf")
+            for rel, inc in g.get("include", {}).items():
+                os.makedirs(os.path.dirname(f"{d}/{rel}"), exist_ok=True); get(inc["url"], f"{d}/{rel}")
+            print("model", kind, mid, flush=True)
+        except Exception as exc:
+            print("model failed", mid, exc)
+models("tree", ["tree", "pine"], 4)
+models("shrub", ["shrub", "bush", "fern", "grass", "plant"], 4)
+models("rock", ["boulder", "rock"], 4)
 sh("find /kaggle/input -maxdepth 6 | head -50 || true")  # show what Kaggle attached
 cars = [os.path.join(r, f) for r, _, fs in os.walk("/kaggle/input") for f in fs if f.lower().endswith(".glb")]
 if not cars and os.environ.get("CAR_URL", CAR_URL if "CAR_URL" in globals() else ""):
@@ -56,14 +77,27 @@ print("car file:", cars[0], flush=True)
 
 # 3. render on the GPU (scene script is embedded below by the GitHub workflow)
 open("/kaggle/temp/scene.py", "w").write(SCENE)
+STAGE = globals().get("STAGE", "final").strip()
+if STAGE == "preview":  # a few stills at good quality, to check the look before the full render
+    os.environ.update(FRAMES="20,60,105,150,205,255,300,345", RES="1280x720", SAMPLES="96")
 t = time.time()
 sh(f"{BL} -b -noaudio -P /kaggle/temp/scene.py -- {A} /kaggle/temp/frames 2>&1 | grep -E 'GPU|frame|car:|sky:|texture|Error|Traceback' ; ls /kaggle/temp/frames | wc -l")
 print(f"render time: {(time.time() - t) / 60:.1f} min", flush=True)
 
+# film grade: teal shadows / warm highlights, deeper blacks, vignette, grain, 2.39:1 cinema frame
+GRADE = ("colorbalance=rs=-0.06:gs=-0.01:bs=0.07:rh=0.07:gh=0.02:bh=-0.07,"
+         "eq=contrast=1.12:saturation=1.08:gamma=0.96,vignette=PI/5,noise=alls=3:allf=t,"
+         "drawbox=y=0:w=iw:h=ih*0.128:color=black:t=fill,drawbox=y=ih*0.872:w=iw:h=ih*0.128:color=black:t=fill")
+if STAGE == "preview":
+    os.makedirs(f"{W}/preview", exist_ok=True)
+    for f in sorted(glob.glob("/kaggle/temp/frames/*.jpg")):
+        sh(f"ffmpeg -y -loglevel error -i {f} -vf '{GRADE.replace(',noise=alls=3:allf=t', '')}' -q:v 3 {W}/preview/{os.path.basename(f)}")
+    print("ALL DONE", flush=True); raise SystemExit(0)
+
 # 4. encode: gentle film grade, light grain, 2.39:1 cinema bars, ambient sound (wind + sea)
 sh(f"ffmpeg -y -loglevel error -framerate 24 -i /kaggle/temp/frames/f_%04d.jpg "
    f"-f lavfi -i 'anoisesrc=c=brown:a=0.5:d=15,lowpass=f=600,tremolo=f=0.15:d=0.6' "
-   f"-vf 'eq=contrast=1.03:saturation=1.04,noise=alls=2:allf=t,drawbox=y=0:w=iw:h=ih*0.12:color=black:t=fill,drawbox=y=ih*0.88:w=iw:h=ih*0.12:color=black:t=fill' "
+   f"-vf '{GRADE}' "
    f"-c:v libx264 -crf 17 -preset slow -pix_fmt yuv420p -c:a aac -b:a 160k -shortest {W}/coast_blender.mp4")
 sh(f"cp /kaggle/temp/frames/f_0060.jpg /kaggle/temp/frames/f_0180.jpg /kaggle/temp/frames/f_0330.jpg {W}/ || true")
 print("ALL DONE", flush=True)

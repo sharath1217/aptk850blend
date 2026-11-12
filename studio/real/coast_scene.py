@@ -48,7 +48,7 @@ def height(x, y):
     cliff_edge = 14 + 4 * math.sin(x / 23) + 3 * noise.noise(Vector((x * 0.03, 0, 2)))
     if d < 6:                                         # road shelf + inland
         shelf = rz - 0.15
-        t = smooth(6, -12, d)
+        t = smooth(-5.5, -15, d)  # flat road shelf across the full road width
         return shelf * (1 - t) + inland * t + detail * t
     if d < cliff_edge:                                # grassy verge toward the cliff edge
         return rz - 0.3 - (d - 6) * 0.25 + detail
@@ -192,6 +192,16 @@ def road_strip(name, off0, off1, dz, mat, x0=-650, x1=1050, step=1.5):
     o = bpy.data.objects.new(name, me); sc.collection.objects.link(o); return o
 
 asphalt = pbr("asphalt", "asphalt", ((0.05, 0.05, 0.055), (0.11, 0.11, 0.115)), 4.0, 0.6)
+_nt = asphalt.node_tree; _b = _nt.nodes["Principled BSDF"]
+if _b.inputs["Roughness"].is_linked:  # wet road: same texture, much glossier, with damp patches
+    src = _b.inputs["Roughness"].links[0].from_socket
+    wet = _nt.nodes.new("ShaderNodeMath"); wet.operation = "MULTIPLY"; wet.inputs[1].default_value = 0.35
+    pn = _nt.nodes.new("ShaderNodeTexNoise"); pn.inputs["Scale"].default_value = 0.08
+    mr = _nt.nodes.new("ShaderNodeMapRange"); mr.inputs["To Min"].default_value = 0.25; mr.inputs["To Max"].default_value = 1.0
+    _nt.links.new(pn.outputs["Fac"], mr.inputs["Value"])
+    m2 = _nt.nodes.new("ShaderNodeMath"); m2.operation = "MULTIPLY"
+    _nt.links.new(src, wet.inputs[0]); _nt.links.new(wet.outputs[0], m2.inputs[0]); _nt.links.new(mr.outputs[0], m2.inputs[1])
+    _nt.links.new(m2.outputs[0], _b.inputs["Roughness"])
 road_strip("road", -4.2, 4.2, 0.0, asphalt)
 paint = bpy.data.materials.new("paint"); paint.use_nodes = True
 paint.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = (0.75, 0.72, 0.62, 1)
@@ -234,6 +244,45 @@ for k in range(220):
     dm = r.modifiers.new("d", "DISPLACE"); tx = bpy.data.textures.new("rk", "VORONOI"); tx.noise_scale = 0.6; dm.texture = tx; dm.strength = 0.4
     r.location = (x, road_y(x) + d, height(x, road_y(x) + d) - 0.3); r.data.materials.append(rockm); r.data.shade_smooth()
 
+# real photo-scanned plants and rocks (Poly Haven models, CC0), scattered as instances
+def load_models(kind):
+    cols = []
+    for gl in sorted(glob.glob(os.path.join(ASSETS, "models", kind, "*", "*.gltf")))[:4]:
+        before = set(bpy.data.objects)
+        try:
+            bpy.ops.import_scene.gltf(filepath=gl)
+        except Exception as exc:
+            print("model failed", gl, exc); continue
+        col = bpy.data.collections.new(os.path.basename(os.path.dirname(gl)))
+        for o in [o for o in bpy.data.objects if o not in before]:
+            for c in list(o.users_collection):
+                c.objects.unlink(o)
+            col.objects.link(o)
+        cols.append(col); print("model:", kind, col.name, flush=True)
+    return cols
+
+def scatter(cols, n, where, scale):
+    if not cols:
+        return
+    for k in range(n):
+        x, y = where()
+        z = height(x, y)
+        e = bpy.data.objects.new("inst", None); e.instance_type = "COLLECTION"; e.instance_collection = rng.choice(cols)
+        e.location = (x, y, z - 0.1); e.rotation_euler = (0, 0, rng.uniform(0, 6.283))
+        sc_ = rng.uniform(*scale); e.scale = (sc_, sc_, sc_); sc.collection.objects.link(e)
+
+trees, shrubs, rocks_m = load_models("tree"), load_models("shrub"), load_models("rock")
+def inland(a, b):
+    def w():
+        x = rng.uniform(-400, 700); return x, road_y(x) - rng.uniform(a, b)
+    return w
+def verge():
+    x = rng.uniform(-400, 700); return x, road_y(x) + rng.choice([-1, 1]) * rng.uniform(5.5, 12)
+scatter(trees, 700 if not PREVIEW else 150, inland(10, 160), (0.8, 1.4))
+scatter(shrubs, 2500 if not PREVIEW else 300, verge, (0.6, 1.5))
+scatter(shrubs, 1500 if not PREVIEW else 200, inland(7, 60), (0.7, 1.6))
+scatter(rocks_m, 400 if not PREVIEW else 80, lambda: (lambda x: (x, road_y(x) + rng.uniform(13, 40)))(rng.uniform(-400, 700)), (0.6, 3.0))
+
 # ocean: Blender's physically based ocean simulation (animated waves + foam)
 bpy.ops.mesh.primitive_plane_add(size=1, location=(200, 600, 0))
 sea = bpy.context.active_object
@@ -270,8 +319,21 @@ else:
     sky.sun_elevation = math.radians(14); sky.sun_rotation = math.radians(250)
     wn.links.new(sky.outputs[0], bg.inputs["Color"]); bg.inputs["Strength"].default_value = 0.3
 sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
-sun.data.energy = 4.5; sun.data.angle = math.radians(0.6); sun.data.color = (1.0, 0.86, 0.7)
-sun.rotation_euler = (math.radians(76), 0, math.radians(160)); sc.collection.objects.link(sun)
+sun.data.energy = 5.0; sun.data.angle = math.radians(0.5); sun.data.color = (1.0, 0.72, 0.45)
+# low sun over the sea (elevation ~8 deg), shining toward the land: backlit cars, glowing haze, long shadows
+sun.rotation_euler = (math.radians(-82), 0, math.radians(-15)); sc.collection.objects.link(sun)
+vol = wn.nodes.new("ShaderNodeVolumePrincipled"); vol.inputs["Density"].default_value = float(os.environ.get("HAZE", "0.0006"))
+vol.inputs["Anisotropy"].default_value = 0.7; vol.inputs["Color"].default_value = (0.95, 0.85, 0.75, 1)
+# haze lives in a big box around the action (a world volume would also swallow the sky)
+bpy.ops.mesh.primitive_cube_add(size=1, location=(150, -200, 120)); hz = bpy.context.active_object
+hz.scale = (2400, 2400, 240); hzm = bpy.data.materials.new("haze"); hzm.use_nodes = True
+hzm.node_tree.nodes.remove(hzm.node_tree.nodes["Principled BSDF"])
+hzm.node_tree.links.new(vol.outputs[0], hzm.node_tree.nodes["Material Output"].inputs["Volume"])
+wn.nodes.remove(vol); vol = hzm.node_tree.nodes.new("ShaderNodeVolumePrincipled")
+vol.inputs["Density"].default_value = float(os.environ.get("HAZE", "0.0004")); vol.inputs["Anisotropy"].default_value = 0.7
+vol.inputs["Color"].default_value = (0.95, 0.85, 0.75, 1)
+hzm.node_tree.links.new(vol.outputs[0], hzm.node_tree.nodes["Material Output"].inputs["Volume"])
+hz.data.materials.append(hzm)
 
 # ------------------------------------------------------------------ the car
 car = bpy.data.objects.new("car", None); sc.collection.objects.link(car)
@@ -305,6 +367,14 @@ else:  # stand-in box for local layout tests only
     b0.scale = (4.5, 1.9, 1.3); b0.location = (0, 0, 0.75); b0.parent = car
     print("car: STAND-IN (no model found)")
 
+for side in (0.62, -0.62):
+    hl = bpy.data.objects.new("headlight", bpy.data.lights.new("headlight", "SPOT"))
+    hl.data.energy = 900; hl.data.spot_size = math.radians(55); hl.data.spot_blend = 0.4
+    hl.data.color = (1.0, 0.95, 0.88); hl.data.shadow_soft_size = 0.05
+    hl.location = (2.25, side, 0.65); hl.rotation_euler = (0, math.radians(-92), 0); hl.parent = car
+    sc.collection.objects.link(hl)
+
+
 def car_pose(f):
     x = X0 + V * (f - 1) / FPS
     y = road_y(x) - 1.9                      # left lane... keep to the inland lane
@@ -337,18 +407,53 @@ def u(f, a, b):
 def fwd(yaw):
     return Vector((math.cos(yaw), math.sin(yaw), 0)), Vector((-math.sin(yaw), math.cos(yaw), 0))
 
-# 1) drone over the sea, tracking the car with the cliffs and mountains behind it
-c1 = camera("drone", 30, lambda f, p, y: p + Vector((60 - 14 * u(f, 1, 120), 48, 30 - 8 * u(f, 1, 120))),
-            lambda f, p, y: p + Vector((-25, -8, 2)))
-# 2) low tracking shot alongside the car (sea side), long lens, road rushing past
-c2 = camera("track", 50, lambda f, p, y: p + fwd(y)[0] * (2.5 - 2 * u(f, 121, 240)) + fwd(y)[1] * 6.5 + Vector((0, 0, 0.9)),
-            lambda f, p, y: p + Vector((0, 0, 0.8)), fstop=4.0)
-# 3) behind the car, rising and pulling back to reveal the whole coastline
-c3 = camera("reveal", 26, lambda f, p, y: p - fwd(y)[0] * (10 + 55 * u(f, 241, 361) ** 1.4) + fwd(y)[1] * (2 + 30 * u(f, 241, 361))
-            + Vector((0, 0, 2.5 + 70 * u(f, 241, 361) ** 1.3)),
-            lambda f, p, y: p + fwd(y)[0] * (25 + 120 * u(f, 241, 361)) + Vector((0, 0, 1)))
-for start, cam in ((1, c1), (121, c2), (241, c3)):
+def rig(name, start, end, lens, loc, aim, fstop=2.8, shake=0.006, slide=(0, 0, 0)):
+    """Camera bolted to a car rig (moves with the car), with engine/road vibration."""
+    cd = bpy.data.cameras.new(name); cd.lens = lens; cd.clip_end = 20000
+    cam = bpy.data.objects.new(name, cd); sc.collection.objects.link(cam); cam.parent = car
+    tgt = bpy.data.objects.new(name + "_aim", None); sc.collection.objects.link(tgt); tgt.parent = car; tgt.location = aim
+    tr = cam.constraints.new("TRACK_TO"); tr.target = tgt; tr.track_axis = "TRACK_NEGATIVE_Z"; tr.up_axis = "UP_Y"
+    cd.dof.use_dof = True; cd.dof.focus_object = tgt; cd.dof.aperture_fstop = fstop
+    for f in range(start, end + 1):
+        k = (f - start) / max(1, end - start)
+        cam.location = Vector(loc) + Vector(slide) * k + Vector((noise.noise(Vector((f * 0.31, 0, 0))), noise.noise(Vector((0, f * 0.37, 0))),
+                                                                  noise.noise(Vector((0, 0, f * 0.43))))) * shake
+        cam.keyframe_insert("location", frame=f)
+    return cam
+
+def world_cam(name, start, end, lens, path, aim, fstop=None, shake=0.0):
+    cd = bpy.data.cameras.new(name); cd.lens = lens; cd.clip_end = 20000
+    cam = bpy.data.objects.new(name, cd); sc.collection.objects.link(cam)
+    tgt = bpy.data.objects.new(name + "_aim", None); sc.collection.objects.link(tgt)
+    tr = cam.constraints.new("TRACK_TO"); tr.target = tgt; tr.track_axis = "TRACK_NEGATIVE_Z"; tr.up_axis = "UP_Y"
+    if fstop:
+        cd.dof.use_dof = True; cd.dof.focus_object = car; cd.dof.aperture_fstop = fstop
+    for f in range(start, end + 1, 2):
+        p, yaw = car_pose(f)
+        cam.location = path(f, p, yaw) + Vector((noise.noise(Vector((f * 0.11, 3, 0))), noise.noise(Vector((5, f * 0.13, 0))), 0)) * shake
+        tgt.location = aim(f, p, yaw)
+        cam.keyframe_insert("location", frame=f); tgt.keyframe_insert("location", frame=f)
+    return cam
+
+# car-local axes: +X forward, +Y left (sea side), +Z up
+SHOTS = [
+    (1,   rig("headlight", 1, 40, 60, (3.4, 1.25, 0.55), (2.1, 0.55, 0.62), 1.8, 0.004, (0, -0.25, 0))),          # headlight & grille
+    (41,  rig("rear_low", 41, 80, 24, (-3.6, 1.6, 0.35), (0.4, 0.3, 0.7), 4.0, 0.008)),                              # low rear 3/4, road rushing
+    (81,  rig("front_track", 81, 130, 32, (11, 0.8, 0.6), (0, 0, 0.75), 2.8, 0.01, (-2.5, 0, 0))),                    # car charging at the lens
+    (131, rig("silhouette", 131, 175, 40, (0.1, -2.6, 1.12), (0.1, 3.0, 0.95), 2.2, 0.004)),                         # driver against the sun & sea
+    (176, world_cam("telephoto", 176, 235, 150,                                                                      # roadside long lens, heat-haze feel
+                    lambda f, p, y: Vector((X0 + V * 235 / FPS + 30, road_y(X0 + V * 235 / FPS + 30) - 9, road_z(X0 + V * 235 / FPS + 30) + 1.4)),
+                    lambda f, p, y: p + Vector((0, 0, 0.7)), 2.8, 0.03)),
+    (236, world_cam("topdown", 236, 275, 28, lambda f, p, y: p + Vector((2 + 0.05 * (f - 236), 0.5, 26)),
+                    lambda f, p, y: p + Vector((2.5, 0, 0)))),
+    (276, world_cam("reveal", 276, 361, 30,                                                                          # drone pull-back into the sun
+                    lambda f, p, y: p + fwd(y)[0] * (-14 - 70 * u(f, 276, 361) ** 1.3) + fwd(y)[1] * (-6 - 25 * u(f, 276, 361))
+                    + Vector((0, 0, 4 + 55 * u(f, 276, 361) ** 1.2)),
+                    lambda f, p, y: p + fwd(y)[0] * (30 + 90 * u(f, 276, 361)) + fwd(y)[1] * (20 * u(f, 276, 361)) + Vector((0, 0, 2)))),
+]
+for start, cam in SHOTS:
     m = sc.timeline_markers.new(cam.name, frame=start); m.camera = cam
+c1 = SHOTS[0][1]
 sc.camera = c1
 
 # ------------------------------------------------------------------ render settings (Cycles, GPU)
@@ -376,6 +481,8 @@ except Exception:
     pass
 sc.cycles.max_bounces = 8
 sc.render.resolution_x, sc.render.resolution_y = (960, 540) if PREVIEW else (1920, 1080)
+if os.environ.get("RES"):
+    sc.render.resolution_x, sc.render.resolution_y = map(int, os.environ["RES"].split("x"))
 sc.render.use_motion_blur = True; sc.render.motion_blur_shutter = 0.5
 sc.render.use_persistent_data = True
 sc.view_settings.view_transform = "AgX"
@@ -388,9 +495,14 @@ sc.render.image_settings.file_format = "JPEG"; sc.render.image_settings.quality 
 sc.view_layers[0].use_pass_mist = True; w.mist_settings.start = 150; w.mist_settings.depth = 5000; w.mist_settings.falloff = "QUADRATIC"
 sc.use_nodes = True; ct = sc.node_tree; rl, comp = ct.nodes["Render Layers"], ct.nodes["Composite"]
 mix = ct.nodes.new("CompositorNodeMixRGB"); mix.inputs[2].default_value = (0.62, 0.7, 0.8, 1)
-mul = ct.nodes.new("CompositorNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = 0.55
+mul = ct.nodes.new("CompositorNodeMath"); mul.operation = "MULTIPLY"; mul.inputs[1].default_value = 0.35
 ct.links.new(rl.outputs["Mist"], mul.inputs[0]); ct.links.new(mul.outputs[0], mix.inputs[0])
-ct.links.new(rl.outputs["Image"], mix.inputs[1]); ct.links.new(mix.outputs[0], comp.inputs[0])
+ct.links.new(rl.outputs["Image"], mix.inputs[1])
+glare = ct.nodes.new("CompositorNodeGlare"); glare.glare_type = "FOG_GLOW"; glare.quality = "HIGH"
+glare.threshold = 1.0; glare.size = 8; glare.mix = -0.75
+lens = ct.nodes.new("CompositorNodeLensdist"); lens.inputs["Distortion"].default_value = -0.012; lens.inputs["Dispersion"].default_value = 0.006
+ct.links.new(mix.outputs[0], glare.inputs["Image"]); ct.links.new(glare.outputs["Image"], lens.inputs["Image"])
+ct.links.new(lens.outputs["Image"], comp.inputs[0])
 
 os.makedirs(OUT, exist_ok=True)
 frames = [int(x) for x in os.environ.get("FRAMES", "").split(",") if x] or range(1, N + 1)
