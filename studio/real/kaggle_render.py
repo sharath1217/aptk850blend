@@ -99,5 +99,6 @@ sh(f"ffmpeg -y -loglevel error -framerate 24 -i /kaggle/temp/frames/f_%04d.jpg "
    f"-f lavfi -i 'anoisesrc=c=brown:a=0.5:d=15,lowpass=f=600,tremolo=f=0.15:d=0.6' "
    f"-vf '{GRADE}' "
    f"-c:v libx264 -crf 17 -preset slow -pix_fmt yuv420p -c:a aac -b:a 160k -shortest {W}/coast_blender.mp4")
-sh(f"cp /kaggle/temp/frames/f_0060.jpg /kaggle/temp/frames/f_0180.jpg /kaggle/temp/frames/f_0330.jpg {W}/ || true")
+for fr in ("0020", "0060", "0105", "0150", "0205", "0255", "0300", "0345"):  # graded stills of each shot
+    sh(f"ffmpeg -y -loglevel error -i /kaggle/temp/frames/f_{fr}.jpg -vf '{GRADE.replace(',noise=alls=3:allf=t', '')}' -q:v 3 {W}/f_{fr}.jpg || true")
 print("ALL DONE", flush=True)

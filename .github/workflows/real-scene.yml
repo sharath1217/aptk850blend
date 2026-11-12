@@ -58,9 +58,11 @@ jobs:
         run: |
           echo "${{ inputs.stage }}" > stage.txt
           python studio/ai/kaggle_job.py getyr-coast-blender studio/real/kaggle_render.py out getyr-scene-assets SCENE=studio/real/coast_scene.py STAGE=stage.txt
-      - name: Save the preview stills to the 'previews' branch
-        if: inputs.stage == 'preview'
+      - name: Save stills to the 'previews' branch (so they can be checked)
+        if: always()
         run: |
+          mkdir -p out/preview; cp out/f_*.jpg out/preview/ 2>/dev/null || true
+          ls out/preview/*.jpg >/dev/null 2>&1 || exit 0
           git config user.name "film-bot" && git config user.email "film-bot@users.noreply.github.com"
           git fetch origin previews && git checkout previews || git checkout --orphan previews
           git rm -rq --cached . 2>/dev/null || true
