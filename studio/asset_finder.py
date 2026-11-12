@@ -176,7 +176,23 @@ def judge(png: Path, what: str, period: str) -> float:
         return -1.0
 
 
-def find(out: Path, what: str, period: str, keywords: list[str], tries: int = 10, must: str = "") -> dict | None:
+def glb_detail(path: Path) -> tuple[int, int]:
+    """(number of texture images, number of triangles) read straight from the .glb header."""
+    import json as _j, struct
+    b = path.read_bytes()
+    if b[:4] != b"glTF":
+        return 0, 0
+    n = struct.unpack_from("<I", b, 12)[0]; g = _j.loads(b[20:20 + n])
+    tris = 0
+    for m in g.get("meshes", []):
+        for p in m.get("primitives", []):
+            acc = g["accessors"][p["indices"]] if "indices" in p else g["accessors"][p["attributes"]["POSITION"]]
+            tris += acc.get("count", 0) // 3
+    return len(g.get("images", [])), tris
+
+
+def find(out: Path, what: str, period: str, keywords: list[str], tries: int = 10, must: str = "",
+         min_images: int = 0, min_tris: int = 0) -> dict | None:
     out.mkdir(parents=True, exist_ok=True)
     build_index()
     cands = nasa(keywords) if any(k in " ".join(keywords).lower() for k in
@@ -191,6 +207,13 @@ def find(out: Path, what: str, period: str, keywords: list[str], tries: int = 10
             glb.write_bytes(httpx.get(url, timeout=600, follow_redirects=True).content)
         except Exception as exc:
             log("download failed:", c["n"], exc); continue
+        if min_images or min_tris:  # realism needs real textures and enough detail
+            try:
+                imgs, tris = glb_detail(glb)
+            except Exception:
+                imgs, tris = 0, 0
+            if imgs < min_images or tris < min_tris:
+                log(f"skip {c['n']}: {imgs} textures, {tris} triangles"); continue
         png = out / f"cand_{i}.png"
         if not preview(glb, png):
             continue

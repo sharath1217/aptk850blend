@@ -41,8 +41,9 @@ jobs:
           python - <<'PY'
           import sys; from pathlib import Path
           sys.path.insert(0, "studio"); import asset_finder
-          got = asset_finder.find(Path("car"), "a realistic modern dark sports car or coupe, complete body with wheels",
-                                  "modern day, photorealistic", ["car", "sports car", "coupe", "supercar", "sedan"])
+          got = asset_finder.find(Path("car"), "a realistic modern sports car or coupe, complete body with wheels, with real painted textures, glass and lights (not a plain white or grey untextured model)",
+                                  "modern day, photorealistic", ["car", "sports car", "coupe", "supercar", "sedan", "realistic car", "porsche", "audi", "bmw"],
+                                  tries=40, min_images=3, min_tris=40000)
           if not got: sys.exit("no good car model found")
           Path("car/credit.txt").write_text(got["credit"] + "\n"); print(got["credit"])
           PY

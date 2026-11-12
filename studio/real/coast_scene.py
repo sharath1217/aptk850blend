@@ -147,7 +147,7 @@ def terrain_material():
     geo = nt.nodes.new("ShaderNodeNewGeometry"); sep = nt.nodes.new("ShaderNodeSeparateXYZ")
     nt.links.new(geo.outputs["Normal"], sep.inputs[0])
     slope = nt.nodes.new("ShaderNodeMapRange")
-    slope.inputs["From Min"].default_value = 0.93; slope.inputs["From Max"].default_value = 0.8
+    slope.inputs["From Min"].default_value = 0.82; slope.inputs["From Max"].default_value = 0.66
     nt.links.new(sep.outputs["Z"], slope.inputs["Value"])
     pos = nt.nodes.new("ShaderNodeSeparateXYZ"); nt.links.new(geo.outputs["Position"], pos.inputs[0])
     hi = nt.nodes.new("ShaderNodeMapRange"); hi.inputs["From Min"].default_value = 120; hi.inputs["From Max"].default_value = 300
@@ -279,8 +279,8 @@ def inland(a, b):
 def verge():
     x = rng.uniform(-400, 700); return x, road_y(x) + rng.choice([-1, 1]) * rng.uniform(5.5, 12)
 scatter(trees, 700 if not PREVIEW else 150, inland(10, 160), (0.8, 1.4))
-scatter(shrubs, 2500 if not PREVIEW else 300, verge, (0.6, 1.5))
-scatter(shrubs, 1500 if not PREVIEW else 200, inland(7, 60), (0.7, 1.6))
+scatter(shrubs, 4000 if not PREVIEW else 300, verge, (0.6, 1.6))
+scatter(shrubs, 6000 if not PREVIEW else 300, inland(7, 120), (0.7, 1.8))
 scatter(rocks_m, 400 if not PREVIEW else 80, lambda: (lambda x: (x, road_y(x) + rng.uniform(13, 40)))(rng.uniform(-400, 700)), (0.6, 3.0))
 
 # ocean: Blender's physically based ocean simulation (animated waves + foam)
@@ -362,6 +362,39 @@ if glbs:
         holder.rotation_euler.z += math.pi
     holder.parent = car
     print("car: real model", glbs[0])
+    def P(name, rgb, rough, metal=0.0, coat=0.0, trans=0.0, emit=0.0):
+        m = bpy.data.materials.new(name); m.use_nodes = True; b = m.node_tree.nodes["Principled BSDF"]
+        b.inputs["Base Color"].default_value = (*rgb, 1); b.inputs["Roughness"].default_value = rough
+        b.inputs["Metallic"].default_value = metal; b.inputs["Coat Weight"].default_value = coat
+        b.inputs["Coat Roughness"].default_value = 0.03; b.inputs["Transmission Weight"].default_value = trans
+        if emit:
+            b.inputs["Emission Color"].default_value = (*rgb, 1); b.inputs["Emission Strength"].default_value = emit
+        return m
+    paint_rgb = tuple(float(v) for v in os.environ.get("CAR_PAINT", "0.02,0.05,0.09").split(","))  # deep metallic blue
+    LOOK = {"glass": P("car_glass", (0.01, 0.012, 0.015), 0.0, trans=0.85), "window": None, "wind": None,
+            "tire": P("car_rubber", (0.015, 0.015, 0.015), 0.6), "tyre": None, "rubber": None,
+            "chrome": P("car_chrome", (0.9, 0.9, 0.92), 0.08, metal=1.0), "rim": None, "wheel": None, "metal": None,
+            "head": P("car_lamp", (1.0, 0.97, 0.9), 0.05, emit=6), "lamp": None, "light": None,
+            "tail": P("car_tail", (0.8, 0.02, 0.02), 0.1, emit=4), "brake": None,
+            "interior": P("car_interior", (0.03, 0.03, 0.03), 0.7), "seat": None,
+            "black": P("car_trim", (0.01, 0.01, 0.01), 0.35), "trim": None, "grill": None, "plastic": None}
+    last = None
+    for k in list(LOOK):
+        LOOK[k] = LOOK[k] or last; last = LOOK[k]
+    body = P("car_paint", paint_rgb, 0.28, metal=0.7, coat=1.0)
+    for o in new:
+        if o.type != "MESH":
+            continue
+        for slot in o.material_slots:
+            m = slot.material; name = (m.name if m else "").lower()
+            textured = m and m.use_nodes and any(n.type == "TEX_IMAGE" for n in m.node_tree.nodes)
+            hit = next((v for k, v in LOOK.items() if k in name), None)
+            if hit:
+                slot.material = hit
+            elif not textured:  # untextured "clay" surface -> real car paint
+                slot.material = body
+        if not o.material_slots:
+            o.data.materials.append(body)
 else:  # stand-in box for local layout tests only
     bpy.ops.mesh.primitive_cube_add(size=1); b0 = bpy.context.active_object
     b0.scale = (4.5, 1.9, 1.3); b0.location = (0, 0, 0.75); b0.parent = car
@@ -437,12 +470,12 @@ def world_cam(name, start, end, lens, path, aim, fstop=None, shake=0.0):
 
 # car-local axes: +X forward, +Y left (sea side), +Z up
 SHOTS = [
-    (1,   rig("headlight", 1, 40, 60, (3.4, 1.25, 0.55), (2.1, 0.55, 0.62), 1.8, 0.004, (0, -0.25, 0))),          # headlight & grille
+    (1,   rig("headlight", 1, 40, 35, (4.8, 2.3, 0.7), (1.2, 0.2, 0.6), 2.2, 0.004, (0, -0.4, 0))),          # headlight & grille
     (41,  rig("rear_low", 41, 80, 24, (-3.6, 1.6, 0.35), (0.4, 0.3, 0.7), 4.0, 0.008)),                              # low rear 3/4, road rushing
     (81,  rig("front_track", 81, 130, 32, (11, 0.8, 0.6), (0, 0, 0.75), 2.8, 0.01, (-2.5, 0, 0))),                    # car charging at the lens
-    (131, rig("silhouette", 131, 175, 40, (0.1, -2.6, 1.12), (0.1, 3.0, 0.95), 2.2, 0.004)),                         # driver against the sun & sea
+    (131, rig("side", 131, 175, 32, (1.0, 6.8, 1.25), (0.0, -1.0, 0.9), 4.0, 0.004)),                         # driver against the sun & sea
     (176, world_cam("telephoto", 176, 235, 150,                                                                      # roadside long lens, heat-haze feel
-                    lambda f, p, y: Vector((X0 + V * 235 / FPS + 30, road_y(X0 + V * 235 / FPS + 30) - 9, road_z(X0 + V * 235 / FPS + 30) + 1.4)),
+                    lambda f, p, y: Vector((X0 + V * 235 / FPS + 30, road_y(X0 + V * 235 / FPS + 30) + 9, road_z(X0 + V * 235 / FPS + 30) + 1.4)),
                     lambda f, p, y: p + Vector((0, 0, 0.7)), 2.8, 0.03)),
     (236, world_cam("topdown", 236, 275, 28, lambda f, p, y: p + Vector((2 + 0.05 * (f - 236), 0.5, 26)),
                     lambda f, p, y: p + Vector((2.5, 0, 0)))),

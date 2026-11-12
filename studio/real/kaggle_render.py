@@ -50,8 +50,10 @@ def models(kind, words, n):
         allm = api("/assets?t=models")
     except Exception as exc:
         print("models list failed", exc); return
+    bad = ("dead", "trunk", "log", "stump", "branch", "dry", "bare", "burnt")  # no leafless sticks
     picks = [k for k, v in allm.items()
-             if any(w in " ".join(v.get("tags", []) + v.get("categories", []) + [k]).lower() for w in words)][:n]
+             if any(w in " ".join(v.get("tags", []) + v.get("categories", []) + [k]).lower() for w in words)
+             and not any(b in k.lower() for b in bad)][:n]
     for mid in picks:
         try:
             g = api(f"/files/{mid}")["gltf"]; res = "2k" if "2k" in g else sorted(g)[0]; g = g[res]["gltf"]
