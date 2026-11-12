@@ -408,6 +408,43 @@ for side in (0.62, -0.62):
     sc.collection.objects.link(hl)
 
 
+def spin_wheels():
+    """Find the wheels in the car model and spin them at the true rolling speed (distance / radius)."""
+    meshes = [o for o in bpy.data.objects if o.type == "MESH" and o.parent and
+              (o.parent == car or o.parent.name == "holder" or (o.parent.parent and o.parent.parent.name == "holder"))]
+    meshes = [o for o in bpy.data.objects if o.type == "MESH" and any(p == car for p in iter_parents(o))]
+    bpy.context.view_layer.update()
+    keys = ("wheel", "tire", "tyre", "rim", "rueda", "rad", "brake_disc", "disc")
+    wheels = [o for o in meshes if any(k in o.name.lower() for k in keys)
+              or any(k in (s.material.name.lower() if s.material else "") for s in o.material_slots for k in ("tire", "tyre", "rubber", "rim"))]
+    groups = {}
+    for o in wheels:  # group parts by corner (front/rear x left/right) in car space
+        c = sum((car.matrix_world.inverted() @ (o.matrix_world @ Vector(b)) for b in o.bound_box), Vector()) / 8
+        if c.z > 1.0:
+            continue
+        groups.setdefault((c.x > 0, c.y > 0), []).append((o, c))
+    if len(groups) < 4:
+        print("wheels: could not separate 4 wheels (found", len(groups), ") - left static, motion blur hides it"); return
+    for corner, parts in groups.items():
+        pts = [car.matrix_world.inverted() @ (o.matrix_world @ Vector(b)) for o, _ in parts for b in o.bound_box]
+        lo = Vector([min(p[i] for p in pts) for i in range(3)]); hi = Vector([max(p[i] for p in pts) for i in range(3)])
+        centre = (lo + hi) / 2; radius = max(0.2, (hi.z - lo.z) / 2)
+        hub = bpy.data.objects.new("hub", None); sc.collection.objects.link(hub); hub.parent = car; hub.location = centre
+        bpy.context.view_layer.update()
+        for o, _ in parts:
+            mw = o.matrix_world.copy(); o.parent = hub; o.matrix_world = mw
+        d = hub.driver_add("rotation_euler", 1).driver
+        d.expression = f"(frame-1)/{FPS}*{V}/{radius:.3f}"
+        print(f"wheels: corner {corner} r={radius:.2f} m, {len(parts)} parts", flush=True)
+
+def iter_parents(o):
+    while o.parent:
+        o = o.parent; yield o
+
+if glbs:
+    spin_wheels()
+
+
 def car_pose(f):
     x = X0 + V * (f - 1) / FPS
     y = road_y(x) - 1.9                      # left lane... keep to the inland lane
