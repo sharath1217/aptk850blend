@@ -13,8 +13,9 @@ json.dump({"id": f"{user}/{slug}", "title": slug, "code_file": "run.py", "langua
            "kernel_type": "script", "is_private": True, "enable_gpu": True, "enable_internet": True,
            "dataset_sources": [f"{user}/{dataset}"] if dataset else [], "competition_sources": [], "kernel_sources": []},
           open(f"{d}/kernel-metadata.json", "w"))
-subprocess.run(["kaggle", "kernels", "push", "-p", d], check=True)
-time.sleep(60)
+if os.environ.get("KAGGLE_FETCH_ONLY") != "1":   # fetch-only: just collect a job that is already running/finished
+    subprocess.run(["kaggle", "kernels", "push", "-p", d], check=True)
+    time.sleep(60)
 start = time.time()
 while True:
     s = subprocess.run(["kaggle", "kernels", "status", f"{user}/{slug}"], capture_output=True, text=True).stdout.strip()
@@ -22,6 +23,8 @@ while True:
     low = s.lower()
     if "complete" in low or "error" in low or "cancel" in low:
         break
+    if time.time() - start > float(os.environ.get("KAGGLE_WAIT_H", "5.6")) * 3600:
+        print("still running on Kaggle - collect it later with stage=collect", flush=True); sys.exit(3)
     if time.time() - start > 12.5 * 3600:
         sys.exit("Kaggle job took too long")
     time.sleep(120)

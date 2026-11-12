@@ -6,7 +6,7 @@ on:
       stage:
         description: "preview = 8 graded stills (cheap, committed to the 'previews' branch) | final = the full 15 s video"
         type: choice
-        options: [preview, final]
+        options: [preview, final, collect]
         default: preview
       which:
         description: "What to make"
@@ -34,6 +34,7 @@ jobs:
         with: {python-version: "3.12"}
       - run: pip install -U kaggle six httpx
       - name: Find a real car model
+        if: inputs.stage != 'collect'
         env:
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
           BLENDER: /opt/blender-4.2.3-linux-x64/blender
@@ -49,8 +50,10 @@ jobs:
           Path("car/credit.txt").write_text(got["credit"] + "\n"); print(got["credit"])
           PY
       - uses: actions/upload-artifact@v4
+        if: inputs.stage != 'collect'
         with: {name: car-model, path: car/, retention-days: 7}
       - name: Upload the car to Kaggle (private dataset)
+        if: inputs.stage != 'collect'
         run: |
           mkdir -p ds && cp car/model.glb ds/car.glb && cp car/credit.txt ds/
           echo "{\"title\": \"getyr-scene-assets\", \"id\": \"$KAGGLE_USERNAME/getyr-scene-assets\", \"licenses\": [{\"name\": \"other\"}]}" > ds/dataset-metadata.json
@@ -58,7 +61,8 @@ jobs:
           sleep 90
       - name: Render on Kaggle's GPU
         run: |
-          echo "${{ inputs.stage }}" > stage.txt
+          echo "${{ inputs.stage == 'collect' && 'final' || inputs.stage }}" > stage.txt
+          if [ "${{ inputs.stage }}" = collect ]; then export KAGGLE_FETCH_ONLY=1; fi
           python studio/ai/kaggle_job.py getyr-coast-blender studio/real/kaggle_render.py out getyr-scene-assets SCENE=studio/real/coast_scene.py STAGE=stage.txt
       - name: Save stills to the 'previews' branch (so they can be checked)
         if: always()
