@@ -358,8 +358,34 @@ if glbs:
         holder.rotation_euler.z = math.pi / 2; mn, mx = bounds(); size = mx - mn
     s = L / size.x; holder.scale = (s, s, s); mn, mx = bounds()
     holder.location -= Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, mn.z))
-    if os.environ.get("CAR_FLIP") == "1":
+    # which end is the front? tail lights / brake lights / number plate sit at the back, headlights at the front
+    bpy.context.view_layer.update()
+    vote = 0.0
+    for o in new:
+        if o.type != "MESH":
+            continue
+        names = (o.name + " " + " ".join(sl.material.name for sl in o.material_slots if sl.material)).lower()
+        cx = sum((o.matrix_world @ Vector(b)).x for b in o.bound_box) / 8
+        if any(k in names for k in ("tail", "brake", "rear", "plate", "exhaust", "back")):
+            vote -= cx          # these should be at -X
+        if any(k in names for k in ("head", "front", "grill", "bumper_f", "hood", "bonnet")):
+            vote += cx          # these should be at +X
+        for sl in o.material_slots:  # red emissive = tail lights
+            m = sl.material
+            if m and m.use_nodes:
+                b = m.node_tree.nodes.get("Principled BSDF")
+                if b and b.inputs["Emission Strength"].default_value > 0 and not b.inputs["Emission Color"].is_linked:
+                    c = b.inputs["Emission Color"].default_value
+                    if c[0] > 0.5 and c[1] < 0.3:
+                        vote -= cx
+    if os.environ.get("CAR_FLIP") is not None:
+        flip = os.environ["CAR_FLIP"] == "1"
+    else:
+        flip = vote < 0 if vote != 0 else os.environ.get("CAR_FLIP_IF_UNSURE", "0") == "1"
+    print("car front check: vote", round(vote, 2), "-> flip" if flip else "-> ok", flush=True)
+    if flip:  # turn 180 deg and re-centre on the car's origin
         holder.rotation_euler.z += math.pi
+        mn, mx = bounds(); holder.location -= Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, mn.z))
     holder.parent = car
     print("car: real model", glbs[0])
     def P(name, rgb, rough, metal=0.0, coat=0.0, trans=0.0, emit=0.0):

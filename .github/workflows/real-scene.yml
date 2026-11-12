@@ -18,6 +18,7 @@ permissions:
   contents: write   # preview stills are committed to the 'previews' branch so they can be inspected
 
 env:
+  CAR_FLIP_IF_UNSURE: "1"   # the current car model faces backwards when nothing in it names front/back
   KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
   KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
   KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN || (startsWith(secrets.KAGGLE_KEY, 'KGAT_') && secrets.KAGGLE_KEY || '') }}

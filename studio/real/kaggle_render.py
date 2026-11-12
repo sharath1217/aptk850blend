@@ -79,6 +79,7 @@ print("car file:", cars[0], flush=True)
 
 # 3. render on the GPU (scene script is embedded below by the GitHub workflow)
 open("/kaggle/temp/scene.py", "w").write(SCENE)
+os.environ.setdefault("CAR_FLIP_IF_UNSURE", "1")
 STAGE = globals().get("STAGE", "final").strip()
 if STAGE == "preview":  # a few stills at good quality, to check the look before the full render
     os.environ.update(FRAMES="20,60,105,150,205,255,300,345", RES="1280x720", SAMPLES="96")
