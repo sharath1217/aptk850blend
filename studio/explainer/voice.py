@@ -24,7 +24,7 @@ json.dump({"ep": ep}, open(props, "w"))
 json.dump({"ep": ep, "pick": ep["short"], "hook": ep.get("short_hook", "")}, open(props.replace(".json", "_short.json"), "w"))
 # dark documentary music bed: slow minor chords over a low drone, with a long echo tail
 chords = [[55.0, 82.41, 130.81], [49.0, 73.42, 116.54], [43.65, 65.41, 103.83], [41.2, 61.74, 98.0]]
-expr = "+".join(f"0.25*sin(2*PI*{c[k]}*t)*(between(mod(t,32),{8*j},{8*j+8}))" for j, c in enumerate(chords) for k in range(3))
+expr = "+".join(f"0.25*sin(2*PI*{c[k]}*t)*(between(mod(t\\,32)\\,{8*j}\\,{8*j+8}))" for j, c in enumerate(chords) for k in range(3))
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", f"aevalsrc=({expr})+0.12*sin(2*PI*36.7*t):s=48000:d={total + 2}",
                 "-af", f"lowpass=f=900,aecho=0.8:0.85:400|900:0.35|0.25,volume=0.5,afade=t=in:d=4,afade=t=out:st={total - 4}:d=4",
                 str(pub / "music.wav")], check=True)
