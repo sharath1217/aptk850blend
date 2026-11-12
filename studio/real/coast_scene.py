@@ -443,6 +443,31 @@ def spin_wheels():
     keys = ("wheel", "tire", "tyre", "rim", "rueda", "rad", "brake_disc", "disc")
     wheels = [o for o in meshes if any(k in o.name.lower() for k in keys)
               or any(k in (s.material.name.lower() if s.material else "") for s in o.material_slots for k in ("tire", "tyre", "rubber", "rim"))]
+    inv = car.matrix_world.inverted()
+    def extent(o):
+        pts = [inv @ (o.matrix_world @ Vector(b)) for b in o.bound_box]
+        return Vector([max(p[i] for p in pts) - min(p[i] for p in pts) for i in range(3)])
+    # several wheels in ONE mesh (common in game/Sketchfab models): split them into separate pieces first
+    split = []
+    for o in wheels:
+        e = extent(o)
+        if e.x > 1.1 or e.y > 0.7:
+            bpy.ops.object.select_all(action="DESELECT"); o.select_set(True); bpy.context.view_layer.objects.active = o
+            try:
+                bpy.ops.object.mode_set(mode="EDIT"); bpy.ops.mesh.select_all(action="SELECT")
+                bpy.ops.mesh.separate(type="LOOSE"); bpy.ops.object.mode_set(mode="OBJECT")
+                split += list(bpy.context.selected_objects)
+            except Exception as exc:
+                print("wheels: split failed", exc); bpy.ops.object.mode_set(mode="OBJECT")
+        else:
+            split.append(o)
+    bpy.context.view_layer.update()
+    # keep only wheel-sized pieces (a wheel is < ~1 m tall/long and < ~0.5 m wide); everything else stays on the body
+    wheels = []
+    for o in split:
+        e = extent(o)
+        if 0.15 < e.z < 1.0 and e.x < 1.0 and e.y < 0.55:
+            wheels.append(o)
     groups = {}
     for o in wheels:  # group parts by corner (front/rear x left/right) in car space
         c = sum((car.matrix_world.inverted() @ (o.matrix_world @ Vector(b)) for b in o.bound_box), Vector()) / 8
