@@ -1,0 +1,25 @@
+{
+  "name": "getyr-explainer",
+  "private": true,
+  "scripts": {
+    "render": "remotion render src/index.ts"
+  },
+  "dependencies": {
+    "@fontsource/inter": "5.1.0",
+    "@fontsource/playfair-display": "5.1.0",
+    "@remotion/cli": "4.0.250",
+    "@remotion/renderer": "4.0.250",
+    "d3-geo": "3.1.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.250",
+    "topojson-client": "3.1.0",
+    "world-atlas": "2.0.2"
+  },
+  "devDependencies": {
+    "@types/d3-geo": "3.1.0",
+    "@types/react": "18.3.12",
+    "@types/topojson-client": "3.1.5",
+    "typescript": "5.6.3"
+  }
+}

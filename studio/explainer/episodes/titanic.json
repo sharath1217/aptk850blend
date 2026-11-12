@@ -1,0 +1,210 @@
+{
+ "title": "Titanic: The Last 2 Hours 40 Minutes",
+ "voice": "en-GB-RyanNeural",
+ "short": [
+  0,
+  6,
+  7,
+  9,
+  12,
+  16
+ ],
+ "short_hook": "She had 2 hours 40 minutes left.",
+ "scenes": [
+  {
+   "type": "title",
+   "kicker": "GETYR STUDIO · HISTORY",
+   "title": "TITANIC",
+   "subtitle": "The Last 2 Hours 40 Minutes",
+   "narration": "April the fourteenth, 1912. The largest moving object ever built by humans is racing across the North Atlantic. In less than three hours, it will be gone."
+  },
+  {
+   "type": "ship",
+   "mode": "intro",
+   "labels": [
+    "269 metres long",
+    "46,000 gross tons",
+    "4 funnels"
+   ],
+   "narration": "RMS Titanic was 269 metres long, the largest ship afloat. Newspapers called her practically unsinkable, because her hull was split into sixteen watertight compartments."
+  },
+  {
+   "type": "map",
+   "view": "voyage",
+   "route": [
+    "Southampton",
+    "Cherbourg",
+    "Queenstown",
+    "Collision"
+   ],
+   "narration": "She left Southampton on April the tenth, stopped at Cherbourg in France and Queenstown in Ireland, then turned west for New York."
+  },
+  {
+   "type": "counter",
+   "value": 2224,
+   "label": "people on board",
+   "sub": "passengers and crew",
+   "narration": "On board were about two thousand two hundred and twenty four people, from millionaires in first class to emigrants in third class, chasing a new life."
+  },
+  {
+   "type": "bars",
+   "title": "Lifeboat seats vs people on board",
+   "items": [
+    {
+     "label": "People on board",
+     "value": 2224
+    },
+    {
+     "label": "Lifeboat seats",
+     "value": 1178
+    }
+   ],
+   "narration": "But there was a problem nobody worried about. Titanic carried twenty lifeboats, with room for only one thousand one hundred and seventy eight people. Barely half."
+  },
+  {
+   "type": "facts",
+   "title": "Sunday, 14 April 1912",
+   "items": [
+    "Several ice warnings received by radio",
+    "Calm sea, no moon",
+    "Speed: about 22 knots"
+   ],
+   "narration": "On Sunday, the radio room received several warnings about ice ahead. The sea was flat calm, there was no moon, and the ship kept up her speed of about twenty two knots."
+  },
+  {
+   "type": "clock",
+   "time": "23:40",
+   "label": "ICEBERG RIGHT AHEAD",
+   "narration": "At eleven forty that night, lookout Frederick Fleet saw a dark shape in the water and rang the bell three times. Iceberg, right ahead!"
+  },
+  {
+   "type": "ship",
+   "mode": "impact",
+   "labels": [
+    "Starboard side",
+    "Below the waterline"
+   ],
+   "narration": "The officers turned hard and reversed the engines, but there was no time. The iceberg scraped along the starboard side, below the waterline."
+  },
+  {
+   "type": "ship",
+   "mode": "compartments",
+   "labels": [
+    "5 compartments flooding",
+    "Built to survive 4"
+   ],
+   "narration": "Five of the sixteen compartments began to flood. Titanic could survive four. With five, the water would spill over from one to the next, like water in an ice cube tray."
+  },
+  {
+   "type": "quote",
+   "text": "She is going to sink. An hour, perhaps an hour and a half.",
+   "by": "Thomas Andrews, the ship's designer (as recalled by survivors)",
+   "narration": "Her designer, Thomas Andrews, inspected the damage and gave the captain the verdict. The ship was going to sink, and soon."
+  },
+  {
+   "type": "timeline",
+   "events": [
+    {
+     "time": "23:40",
+     "label": "Collision"
+    },
+    {
+     "time": "00:05",
+     "label": "Lifeboats uncovered"
+    },
+    {
+     "time": "00:15",
+     "label": "First distress call"
+    },
+    {
+     "time": "00:45",
+     "label": "First lifeboat lowered"
+    }
+   ],
+   "narration": "Just after midnight, the crew uncovered the lifeboats. The radio operators sent distress calls, and at about a quarter to one, the first lifeboat was lowered into the dark."
+  },
+  {
+   "type": "counter",
+   "value": 12,
+   "label": "people in Lifeboat 1",
+   "sub": "it had room for 40",
+   "narration": "Many passengers still believed the ship was safer than a small boat on a freezing sea. So the first boats left half empty. Lifeboat one carried just twelve people."
+  },
+  {
+   "type": "map",
+   "view": "rescue",
+   "route": [
+    "Carpathia",
+    "Collision"
+   ],
+   "narration": "Help was coming. The liner Carpathia heard the call about fifty eight nautical miles away, and raced north through the ice at full speed. But she needed nearly four hours."
+  },
+  {
+   "type": "ship",
+   "mode": "sinking",
+   "labels": [
+    "Bow going under"
+   ],
+   "narration": "By two in the morning, the bow was deep under water and the stern was rising into the air. The last lifeboat left at five past two."
+  },
+  {
+   "type": "clock",
+   "time": "02:20",
+   "label": "TITANIC SINKS",
+   "narration": "At two twenty a.m., Titanic broke apart and sank. Two hours and forty minutes after the collision."
+  },
+  {
+   "type": "facts",
+   "title": "In the water",
+   "items": [
+    "Water temperature: about −2 °C",
+    "Most people in the water died within minutes",
+    "Only one lifeboat went back"
+   ],
+   "narration": "The water was about minus two degrees Celsius. Hundreds of people were in the water, and most died within minutes from the cold. Only one lifeboat went back to look for survivors."
+  },
+  {
+   "type": "bars",
+   "title": "When Carpathia arrived",
+   "items": [
+    {
+     "label": "Died",
+     "value": 1500,
+     "suffix": "+"
+    },
+    {
+     "label": "Survived",
+     "value": 705,
+     "prefix": "~"
+    }
+   ],
+   "narration": "Carpathia arrived at about four in the morning. She found around seven hundred survivors in the lifeboats. More than fifteen hundred people had died."
+  },
+  {
+   "type": "facts",
+   "title": "What changed after Titanic",
+   "items": [
+    "Lifeboat seats for everyone on board",
+    "Radio watch 24 hours a day",
+    "The International Ice Patrol"
+   ],
+   "narration": "The disaster changed the sea forever. New rules required lifeboat seats for everyone, radios staffed day and night, and an ice patrol that still watches the North Atlantic today."
+  },
+  {
+   "type": "depth",
+   "depth": 3800,
+   "compare": "About 4.5 times the height of the world's tallest building",
+   "narration": "In 1985, explorers finally found the wreck, almost four kilometres down, broken in two, exactly as some survivors had described."
+  },
+  {
+   "type": "outro",
+   "title": "TITANIC",
+   "lines": [
+    "Launched 1911",
+    "Sank 15 April 1912",
+    "Found 1985"
+   ],
+   "narration": "Titanic was built to be unsinkable. In the end, it was the ship that taught the world that nothing is. Follow GetYr Studio for more stories from history."
+  }
+ ]
+}

@@ -1,0 +1,56 @@
+name: Explainer video
+
+on:
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: "Episode file in studio/explainer/episodes/"
+        default: "titanic.json"
+
+permissions:
+  contents: write   # stills go to the 'previews' branch for checking
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    defaults: {run: {working-directory: studio/explainer}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: |
+          npm ci || npm install
+          pip install edge-tts
+          command -v ffmpeg || (pip install imageio-ffmpeg && sudo ln -sf "$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg)
+          command -v ffprobe || sudo apt-get install -y ffmpeg
+      - name: Voice, timing and music
+        run: python voice.py "episodes/${{ inputs.episode }}" public props.json
+      - name: Render the explainer (1920x1080) and the Short (1080x1920)
+        run: |
+          npx remotion render src/index.ts Explainer out/video.mp4 --props=props.json --concurrency=4 --crf=18
+          npx remotion render src/index.ts Short out/short.mp4 --props=props_short.json --concurrency=4 --crf=18
+      - name: Add the music bed under the voice
+        run: |
+          for v in video short; do
+            ffmpeg -y -loglevel error -i out/$v.mp4 -i public/music.wav -filter_complex "[1:a]volume=0.22[m];[0:a][m]amix=inputs=2:duration=first:normalize=0[a]" \
+              -map 0:v -map "[a]" -c:v copy -c:a aac -b:a 192k out/${v}_final.mp4
+          done
+      - name: Stills for checking
+        run: |
+          mkdir -p out/stills
+          for t in 5 20 40 60 80 100 120 140 160 180 200 220; do ffmpeg -y -loglevel error -ss $t -i out/video_final.mp4 -frames:v 1 -vf scale=960:-1 out/stills/v_$t.jpg || true; done
+          for t in 2 10 20 30 40; do ffmpeg -y -loglevel error -ss $t -i out/short_final.mp4 -frames:v 1 -vf scale=540:-1 out/stills/s_$t.jpg || true; done
+      - uses: actions/upload-artifact@v4
+        with: {name: explainer-video, path: "studio/explainer/out/*_final.mp4", retention-days: 14}
+      - name: Save stills to the 'previews' branch
+        working-directory: .
+        run: |
+          git config user.name "film-bot" && git config user.email "film-bot@users.noreply.github.com"
+          cp -r studio/explainer/out/stills /tmp/stills
+          git fetch origin previews && git checkout previews
+          D="explainer/$(date +%Y%m%d-%H%M)"; mkdir -p "$D" && cp /tmp/stills/* "$D"/
+          git add explainer && git commit -m "Explainer stills $D" && git push origin previews
