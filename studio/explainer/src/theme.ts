@@ -17,9 +17,9 @@ export const C = {
 // ease helpers: everything moves like a camera operator, never linear
 export const ease = Easing.bezier(0.22, 1, 0.36, 1);
 export const inOut = Easing.bezier(0.65, 0, 0.35, 1);
-export const fade = (f: number, start: number, len = 18) =>
+export const fade = (f: number, start: number, len = 10) =>
   interpolate(f, [start, start + len], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
-export const rise = (f: number, start: number, dist = 40, len = 24) =>
+export const rise = (f: number, start: number, dist = 40, len = 14) =>
   interpolate(f, [start, start + len], [dist, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease });
 export const prog = (f: number, a: number, b: number, e = inOut) =>
   interpolate(f, [a, b], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: e });

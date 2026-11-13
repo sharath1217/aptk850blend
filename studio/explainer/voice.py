@@ -11,13 +11,13 @@ def dur(f):
 for i, s in enumerate(ep["scenes"]):
     f = pub / "audio" / f"s{i}.mp3"
     for attempt in range(8):
-        v = ep.get("voice", "en-GB-RyanNeural") if attempt < 5 else "en-US-GuyNeural"
-        r = subprocess.run(["edge-tts", "--voice", v, "--rate=-6%", "--text", s["narration"], "--write-media", str(f)], capture_output=True, text=True)
+        v = ep.get("voice", "en-US-AndrewMultilingualNeural") if attempt < 5 else "en-US-GuyNeural"
+        r = subprocess.run(["edge-tts", "--voice", v, f"--rate={ep.get('rate', '+4%')}", "--text", s["narration"], "--write-media", str(f)], capture_output=True, text=True)
         if r.returncode == 0 and f.exists() and f.stat().st_size > 2000:
             break
         print("voice retry", i, r.stderr[-150:]); time.sleep(3 * (attempt + 1))
     d = dur(f); s["audio"] = True
-    s["frames"] = int((d + (1.4 if s["type"] in ("title", "outro", "clock") else 0.9)) * FPS)
+    s["frames"] = int((d + (0.9 if s["type"] in ("title", "outro") else 0.3)) * FPS)
     print(f"scene {i:02d} {s['type']:9s} {d:5.1f}s")
 total = sum(s["frames"] for s in ep["scenes"]) / FPS
 json.dump({"ep": ep}, open(props, "w"))

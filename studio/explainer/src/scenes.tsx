@@ -136,7 +136,7 @@ export const MapScene: React.FC<any> = ({ view, route, dur }) => {
 // ---------------------------------------------------------------- big number
 export const Counter: React.FC<any> = ({ value, label, sub, dur }) => {
   const f = useCurrentFrame(); const { u } = useU();
-  const n = Math.round(value * prog(f, 10, Math.min(70, dur * 0.5), ease));
+  const n = Math.round(value * prog(f, 4, Math.min(40, dur * 0.4), ease));
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
       <div style={{ fontFamily: SERIF, fontSize: 260 * u, color: C.gold2, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{n.toLocaleString("en-US")}</div>
@@ -154,7 +154,7 @@ export const Bars: React.FC<any> = ({ title, items }) => {
     <AbsoluteFill style={{ justifyContent: "center", padding: `0 ${tall ? 8 : 14}%` }}>
       <Kicker t={title.toUpperCase()} />
       {items.map((it: any, i: number) => {
-        const g = prog(f, 20 + i * 25, 70 + i * 25, ease);
+        const g = prog(f, 8 + i * 15, 40 + i * 15, ease);
         return <div key={i} style={{ marginTop: 50 * u }}>
           <div style={{ fontFamily: SANS, fontSize: 32 * u, color: C.text, marginBottom: 12 * u, opacity: fade(f, 15 + i * 25) }}>{it.label}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 24 * u }}>
@@ -174,7 +174,7 @@ export const Facts: React.FC<any> = ({ title, items }) => {
     <AbsoluteFill style={{ justifyContent: "center", padding: `0 ${tall ? 8 : 14}%` }}>
       <div style={{ fontFamily: SERIF, fontSize: 70 * u, color: C.text, opacity: fade(f, 0), marginBottom: 40 * u }}>{title}</div>
       {items.map((t: string, i: number) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 26 * u, margin: `${18 * u}px 0`, opacity: fade(f, 20 + i * 30), transform: `translateX(${rise(f, 20 + i * 30, 60)}px)` }}>
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 26 * u, margin: `${18 * u}px 0`, opacity: fade(f, 8 + i * 14), transform: `translateX(${rise(f, 8 + i * 14, 60)}px)` }}>
           <div style={{ width: 14 * u, height: 14 * u, transform: "rotate(45deg)", background: C.gold }} />
           <div style={{ fontFamily: SANS, fontSize: 40 * u, color: C.text }}>{t}</div>
         </div>
@@ -235,7 +235,7 @@ export const Quote: React.FC<any> = ({ text, by }) => {
     <AbsoluteFill style={{ justifyContent: "center", alignItems: "center", textAlign: "center", padding: "0 12%" }}>
       <div style={{ fontFamily: SERIF, fontSize: 150 * u, color: C.gold, lineHeight: 0.6, opacity: fade(f, 0) }}>“</div>
       <div style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: 64 * u, color: C.text, lineHeight: 1.3 }}>
-        {words.map((w: string, i: number) => <span key={i} style={{ opacity: fade(f, 10 + i * 4, 12) }}>{w} </span>)}
+        {words.map((w: string, i: number) => <span key={i} style={{ opacity: fade(f, 4 + i * 2, 8) }}>{w} </span>)}
       </div>
       <div style={{ fontFamily: SANS, fontSize: 28 * u, color: C.dim, marginTop: 40 * u, opacity: fade(f, 20 + words.length * 4) }}>— {by}</div>
     </AbsoluteFill>
