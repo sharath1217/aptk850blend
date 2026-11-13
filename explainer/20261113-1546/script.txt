@@ -1,0 +1,26 @@
+HOW MOSFET WORKS
+
+[00 title] If you're watching this on a screen, a MOSFET is running the show. It's the tiny switch that powers your world.
+[01 valve] Think of a MOSFET like a water tap. The source is where the water comes in, and the drain is where it flows out.
+[02 valve] But here's the trick: the gate doesn't block the water. A tiny voltage at the gate pulls the channel open.
+[03 silicon] Inside, it's made of silicon. We pump phosphorus in to make it n-type, or boron for p-type.
+[04 mosfet] With no voltage on the gate, the channel is closed. It's an insulator. Zero flow.
+[05 mosfet] Apply a positive voltage, and the gate creates an invisible bridge of electrons. Channel open. Current flows.
+[06 counter] We've shrunk this valve down to nanometres. Modern chips hold about a billion of them.
+[07 circuit] Hook a MOSFET up to a battery and an LED, and you have a switch that can be turned on and off instantly.
+[08 binary] Eight of these switching fast enough spell out binary. ON is 1, OFF is 0.
+[09 facts] Here are three facts: the first one hit labs in 1959. It replaced the bulky vacuum tube. And it is the most manufactured device on the planet.
+[10 depth] The gate channel is just 22 nanometres thick. That is one-thousandth the width of a human hair.
+[11 bars] A MOSFET gate is 2,000 times smaller than a human hair. That is tiny.
+[12 timeline] From 1959 to the first pocket computers, the MOSFET changed everything. By the 2000s, it was inside every phone.
+[13 valve] The gate voltage acts like a thumb over the tap. More voltage, more flow. Less voltage, less flow.
+[14 clock] It's 3 PM. Your phone just switched on using billions of these tiny gates flickering in sequence.
+[15 outro] On or off. Zero or one. That is the MOSFET in a nutshell. Follow GetYr Studio for more.
+
+--- SHORT ---
+[title] Your screen is on because of a MOSFET.
+[valve] It works like a water tap. Source in, drain out.
+[mosfet] Voltage at the gate opens the channel. Electrons flow.
+[counter] Billions of them switching every second.
+[facts] First built in 1959. Smaller than a human hair. Powers your laptop.
+[outro] Your phone runs on them. Watch this again. GetYr Studio.
