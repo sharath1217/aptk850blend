@@ -1,0 +1,21 @@
+How MOSFETs Work
+
+[00 title] Here's a wild fact: your smartphone has billions of these tiny switches inside. Without them, your computer wouldn't exist.
+[01 valve] Think of a MOSFET like a water tap. The Source is where the water comes in. The Drain is where it flows out. But the Gate? That's your finger on the knob.
+[02 counter] That tap controls a massive flow. A modern chip packs a billion of these babies onto a piece of sand no bigger than your fingernail.
+[03 depth] The Gate sits incredibly close to the channel. We're talking atoms away. This tiny gap is what makes or breaks the switch.
+[04 silicon] The whole thing sits on a Silicon crystal. Pure silicon doesn't conduct well, so we dope it with Phosphorus or Boron to create paths for electricity.
+[05 mosfet] When no voltage hits the Gate, the channel stays closed. It's like a dry riverbed. No water flows from Source to Drain. The switch is OFF.
+[06 mosfet] Apply a positive voltage to the Gate. It pulls electrons down. A conductive bridge forms between Source and Drain. Water flows. The switch is ON.
+[07 facts] So there you have it. Voltage at the Gate opens the path. No voltage, and it closes. Simple, right?
+[08 circuit] Hook this up to a battery and an LED. No gate voltage? LED stays dark. Add gate voltage? LED lights up. That's amplification in a nutshell.
+[09 counter] It's been about fifty years since the MOSFET was born. It killed the bulky vacuum tube and gave us the digital age.
+[10 outro] That's the MOSFET in a minute. Follow GetYr Studio for more, and let's demystify the world together.
+
+--- SHORT ---
+[title] Your phone? Powered by millions of these.
+[valve] It's a voltage-controlled water tap.
+[mosfet] Voltage opens the bridge. Current flows.
+[mosfet] No voltage. Bridge stays closed. No flow.
+[counter] Tiny, but mighty.
+[outro] See? It's just a gate away.
