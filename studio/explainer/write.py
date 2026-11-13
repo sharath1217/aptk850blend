@@ -5,6 +5,7 @@ Two passes: writer -> editor/fact-checker. Free NVIDIA API (NVIDIA_API_KEY)."""
 import json, os, re, sys, time
 import httpx
 
+log = lambda *a: print(*a, file=sys.stderr, flush=True)
 PREFER = ["moonshotai/kimi-k2", "qwen/qwen3-235b", "deepseek-ai/deepseek-v3", "openai/gpt-oss-120b", "meta/llama-4-maverick",
           "nvidia/llama-3.3-nemotron-super", "meta/llama-3.3-70b", "qwen/qwen3", "nvidia/nemotron-3.5-lightning-30b-a3b"]
 
