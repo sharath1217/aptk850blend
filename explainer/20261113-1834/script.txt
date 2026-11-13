@@ -1,0 +1,31 @@
+How AI Data Centers Work
+
+[00 title] You type a prompt. A ghost answers. But behind that ghost is a building. A massive, humming beast that never sleeps.
+[01 counter] A single hyperscale data center can house about 2,500 server racks. That is enough compute to power a small city block.
+[02 facts] Here is the simple truth: they run non-stop. They sip electricity like a thirsty giant and spit out heat that would cook a human in seconds.
+[03 diagram] Look inside one rack. It is a skyscraper of silicon. GPUs stacked like shelves, all working in parallel to crunch numbers.
+[04 timeline] It started with deep learning in the early 2020s. Then ChatGPT in 2022 woke everyone up. Now, even Gartner says we are in a 'trough of disillusionment' as returns get harder to find.
+[05 bars] One single AI query uses about ten times more power than a standard Google search. That is the energy cost of thinking, versus searching.
+[06 photo] To stop the chips from melting, they need cooling. Lots of it. Some centers use millions of gallons of water a day, just to carry heat away.
+[07 counter] Analysts predict US data centers could consume about 40 terawatt-hours of electricity per year by 2030. That is roughly the output of ten large nuclear reactors.
+[08 quote] It is a race between compute speed and energy limits. Right now, the computers are winning.
+[09 depth] A typical data center floor is packed with about two thousand meters of machinery. That is deeper than the height of many mountains, packed into one room.
+[10 facts] The big tech giants are spending hundreds of billions to build these places. It is the biggest construction project in the history of computing.
+[11 timeline] From GPT-1 in 2018 to ChatGPT crossing 100 million users in 2023, the adoption has been rocket-fast. A 2024 survey showed that 83% of Chinese respondents were already using the technology.
+[12 bars] One AI query uses about five hundred milliliters of water for cooling. A Google search uses about half a milliliter. That is the hidden splash of every prompt.
+[13 counter] Chinese entities filed over thirty-eight thousand generative AI patents in just nine years. That is more than any other country in the world.
+[14 quote] Despite concerns, most people in the Asia-Pacific region see the positive side. They are more optimistic than Western societies.
+[15 diagram] Here is the trip: your prompt travels across the web, lands in a data center, gets chewed by a cluster of chips, and spits out an answer in seconds.
+[16 facts] Every time you ask a question, it costs real money in electricity and hardware. Training a model like GPT-4 cost over a hundred million dollars before it ever saw a user.
+[17 quote] An analysis from mid-2026 estimated that just under twenty-five percent of public web pages now contain text written or heavily modified by AI. The rate of change is increasing fast.
+[18 counter] About fifty-four percent of adults worldwide have tried generative AI at least once. That is more than half the planet.
+[19 title] Your prompts travel to a warehouse, get crunched by silicon, and come back as answers. That is how AI data centers work.
+[20 outro] Thanks for watching. Follow GetYr Studio for more.
+
+--- SHORT ---
+[title] One AI query uses the same energy as charging your phone to 1%. Wait for it.
+[counter] A typical center holds about 2,500 server racks. Stack them up and they touch the ceiling.
+[bars] AI uses ten times the power of a regular search. That is the price of intelligence.
+[photo] Rows and rows of humming machines. This is where the magic happens.
+[quote] That is the tradeoff we are making right now.
+[outro] Follow GetYr Studio. The loop starts now.
