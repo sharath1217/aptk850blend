@@ -28,7 +28,7 @@ export const Frame: React.FC<{ children: React.ReactNode; caption?: string; dur:
       <AbsoluteFill style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.75) 100%)" }} />
       {current && (
         <div style={{ position: "absolute", left: "8%", right: "8%", bottom: height > width ? "14%" : "6%", textAlign: "center",
-          fontFamily: SANS, fontSize: 30 * u * (height > width ? 1.25 : 1), lineHeight: 1.35, color: C.text, fontWeight: 500,
+          fontFamily: SANS, fontSize: 30 * u * (height > width ? 1.7 : 1), fontWeight: height > width ? 700 : 500, lineHeight: 1.35, color: C.text,
           textShadow: "0 2px 12px rgba(0,0,0,0.9)", opacity: out }}>{current}</div>
       )}
     </AbsoluteFill>

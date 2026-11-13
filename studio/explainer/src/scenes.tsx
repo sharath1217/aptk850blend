@@ -5,7 +5,9 @@ import { feature } from "topojson-client";
 import land50 from "world-atlas/land-50m.json";
 import { C, SERIF, SANS, fade, rise, prog, ease, inOut } from "./theme";
 
-const useU = () => { const { width, height } = useVideoConfig(); return { u: Math.min(width, height) / 1080, w: width, h: height, tall: height > width }; };
+// vertical (Shorts/Reels) gets ~40% bigger elements: they must read on a phone at a glance
+const useU = () => { const { width, height } = useVideoConfig(); const tall = height > width;
+  return { u: (Math.min(width, height) / 1080) * (tall ? 1.4 : 1), w: width, h: height, tall }; };
 const Kicker: React.FC<{ t: string; at?: number }> = ({ t, at = 0 }) => {
   const f = useCurrentFrame(); const { u } = useU();
   return <div style={{ fontFamily: SANS, letterSpacing: 8 * u, fontSize: 22 * u, color: C.gold, opacity: fade(f, at), fontWeight: 600 }}>{t}</div>;
@@ -18,7 +20,7 @@ export const Title: React.FC<any> = ({ kicker, title, subtitle }) => {
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
       <Kicker t={kicker} at={8} />
-      <div style={{ fontFamily: SERIF, fontSize: 190 * u, color: C.text, letterSpacing: spacing * u, marginTop: 20 * u,
+      <div style={{ fontFamily: SERIF, fontSize: Math.min(190 * u, 1700 / Math.max(6, title.length) * (u / 1.4)), color: C.text, letterSpacing: spacing * u * 0.6, marginTop: 20 * u,
         opacity: fade(f, 14, 40), transform: `scale(${interpolate(f, [0, 200], [1.08, 1])})` }}>{title}</div>
       <div style={{ width: interpolate(prog(f, 40, 90), [0, 1], [0, 420]) * u, height: 2 * u, background: C.gold, margin: `${26 * u}px 0` }} />
       <div style={{ fontFamily: SERIF, fontStyle: "italic", fontSize: 54 * u, color: C.gold2, opacity: fade(f, 60, 30), transform: `translateY(${rise(f, 60)}px)` }}>{subtitle}</div>
@@ -247,7 +249,7 @@ export const Outro: React.FC<any> = ({ title, lines }) => {
   const f = useCurrentFrame(); const { u } = useU();
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-      <div style={{ fontFamily: SERIF, fontSize: 140 * u, letterSpacing: 24 * u, color: C.text, opacity: fade(f, 0, 40) }}>{title}</div>
+      <div style={{ fontFamily: SERIF, fontSize: Math.min(140 * u, 1500 / Math.max(6, title.length)), letterSpacing: 12 * u, color: C.text, opacity: fade(f, 0, 40) }}>{title}</div>
       <div style={{ display: "flex", gap: 50 * u, marginTop: 30 * u, flexWrap: "wrap", justifyContent: "center" }}>
         {lines.map((l: string, i: number) => <div key={i} style={{ fontFamily: SANS, fontSize: 30 * u, color: C.gold2, opacity: fade(f, 30 + i * 20) }}>{l}</div>)}
       </div>
