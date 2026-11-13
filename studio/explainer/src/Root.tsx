@@ -10,8 +10,11 @@ const SCENES: Record<string, React.FC<any>> = { title: Title, ship: Ship, map: M
   facts: Facts, clock: Clock, timeline: Timeline, quote: Quote, outro: Outro, depth: Depth, valve: Valve, silicon: Silicon, mosfet: Mosfet, circuit: Circuit, binary: Binary };
 const framesOf = (s: any) => s.frames || Math.round((s.narration.split(" ").length / 2.4 + 1.2) * FPS);
 
-const Film: React.FC<{ ep: any; pick?: number[]; hook?: string }> = ({ ep, pick, hook }) => {
-  const scenes = (pick ? pick.map((i) => ({ ...ep.scenes[i], idx: i })) : ep.scenes.map((s: any, i: number) => ({ ...s, idx: i })));
+const shortScenes = (ep: any) => (ep.short_scenes || []).map((s: any, i: number) => ({ ...s, idx: `sh${i}` }));
+const Film: React.FC<{ ep: any; pick?: number[]; hook?: string; short?: boolean }> = ({ ep, pick, hook, short }) => {
+  const scenes = short && ep.short_scenes ? shortScenes(ep)
+    : (pick ? pick.map((i) => ({ ...ep.scenes[i], idx: i })) : ep.scenes.map((s: any, i: number) => ({ ...s, idx: i })));
+  if (short && ep.short_scenes) hook = undefined;  // a written Short opens on its own hook scene
   let at = hook ? 75 : 0;
   return (
     <AbsoluteFill style={{ background: C.bg0 }}>
@@ -21,7 +24,7 @@ const Film: React.FC<{ ep: any; pick?: number[]; hook?: string }> = ({ ep, pick,
         return (
           <Sequence key={s.idx} from={from} durationInFrames={d}>
             <Frame caption={s.narration} dur={d}><Comp {...s} dur={d} /></Frame>
-            {s.audio && <Audio src={staticFile(`audio/s${s.idx}.mp3`)} />}
+            {s.audio && <Audio src={staticFile(`audio/${s.audio_key || "s" + s.idx}.mp3`)} />}
           </Sequence>
         );
       })}
@@ -37,8 +40,9 @@ const Hook: React.FC<{ text: string; tag?: string }> = ({ text, tag = "GETYR STU
   </AbsoluteFill>;
 };
 
-const total = (ep: any, pick?: number[], hook?: boolean) =>
-  (pick ? pick.map((i) => ep.scenes[i]) : ep.scenes).reduce((a: number, s: any) => a + framesOf(s), hook ? 75 : 0);
+const total = (ep: any, pick?: number[], hook?: boolean, short?: boolean) =>
+  short && ep.short_scenes ? ep.short_scenes.reduce((a: number, s: any) => a + framesOf(s), 0)
+  : (pick ? pick.map((i) => ep.scenes[i]) : ep.scenes).reduce((a: number, s: any) => a + framesOf(s), hook ? 75 : 0);
 
 export const Root: React.FC = () => (
   <>
@@ -46,6 +50,6 @@ export const Root: React.FC = () => (
       defaultProps={{ ep: sample }} calculateMetadata={({ props }: any) => ({ durationInFrames: total(props.ep) })} />
     <Composition id="Short" component={Film as any} fps={FPS} width={1080} height={1920} durationInFrames={total(sample, sample.short, true)}
       defaultProps={{ ep: sample, pick: sample.short, hook: sample.short_hook }}
-      calculateMetadata={({ props }: any) => ({ durationInFrames: total(props.ep, props.pick, true) })} />
+      calculateMetadata={({ props }: any) => ({ durationInFrames: total(props.ep, props.pick, !props.short, props.short) })} />
   </>
 );

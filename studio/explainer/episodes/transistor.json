@@ -157,5 +157,54 @@
    ],
    "narration": "That's the transistor. The tiny switch that runs the world. Follow GetYr Studio for more simple explanations of how things work."
   }
+ ],
+ "short_scenes": [
+  {
+   "type": "counter",
+   "value": 19000000000,
+   "label": "switches",
+   "sub": "inside your phone chip",
+   "narration": "There are nineteen billion tiny switches inside your phone. Right now. Flipping on and off."
+  },
+  {
+   "type": "valve",
+   "labels": [
+    "in",
+    "control",
+    "out"
+   ],
+   "narration": "Each one is a transistor. Think of a water tap. A tiny twist controls a huge flow."
+  },
+  {
+   "type": "mosfet",
+   "narration": "Put a small voltage on the gate, and electrons rush through. Take it away, and they stop."
+  },
+  {
+   "type": "binary",
+   "narration": "On is one. Off is zero. Eight of them can spell a letter."
+  },
+  {
+   "type": "timeline",
+   "events": [
+    {
+     "time": "1971",
+     "label": "2,300"
+    },
+    {
+     "time": "2023",
+     "label": "19 billion"
+    }
+   ],
+   "narration": "In 1971, a whole chip had two thousand three hundred. Today, nineteen billion."
+  },
+  {
+   "type": "outro",
+   "title": "TRANSISTOR",
+   "lines": [
+    "The tiny switch",
+    "that runs the world"
+   ],
+   "narration": "The tiny switch that runs the world. Follow for more."
+  }
  ]
 }

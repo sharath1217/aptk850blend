@@ -23,7 +23,8 @@ Every video: a 3-5 min YouTube film (16:9) + a 45-60 s Short/Reel (9:16). Cost p
 
 ## Formats
 - **Deep explainer** (3-5 min): "How a transistor works", "The last 2 hours 40 minutes of Titanic"
-- **Short / Reel** (45-60 s): the hook plus the best 4-6 scenes of each film, vertical, word-by-word captions
+- **Short / Reel** (30-60 s): **written and voiced separately** (never cropped or cut from the film). Its own punchy script,
+  hook in the first second, vertical-first layout, faster pace, word-by-word captions, loop-friendly ending
 - **Monthly special** (6-8 min): bigger story with more scenes
 
 ## Schedule (automatic)
