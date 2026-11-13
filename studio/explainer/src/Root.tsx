@@ -1,13 +1,13 @@
 import React from "react";
 import { AbsoluteFill, Audio, Composition, Sequence, staticFile, useCurrentFrame, interpolate } from "remotion";
 import { Frame } from "./Frame";
-import { Title, Ship, MapScene, Counter, Bars, Facts, Clock, Timeline, Quote, Outro, Depth, Valve, Silicon, Mosfet, Circuit, Binary } from "./scenes";
+import { Title, Ship, MapScene, Counter, Bars, Facts, Clock, Timeline, Quote, Outro, Depth, Valve, Silicon, Mosfet, Circuit, Binary, Diagram, Photo } from "./scenes";
 import { C, SERIF, SANS, fade } from "./theme";
 import sample from "../episodes/titanic.json";
 
 const FPS = 30;
 const SCENES: Record<string, React.FC<any>> = { title: Title, ship: Ship, map: MapScene, counter: Counter, bars: Bars,
-  facts: Facts, clock: Clock, timeline: Timeline, quote: Quote, outro: Outro, depth: Depth, valve: Valve, silicon: Silicon, mosfet: Mosfet, circuit: Circuit, binary: Binary };
+  facts: Facts, clock: Clock, timeline: Timeline, quote: Quote, outro: Outro, depth: Depth, valve: Valve, silicon: Silicon, mosfet: Mosfet, circuit: Circuit, binary: Binary, diagram: Diagram, photo: Photo };
 const framesOf = (s: any) => s.frames || Math.round((s.narration.split(" ").length / 2.4 + 1.2) * FPS);
 
 const shortScenes = (ep: any) => (ep.short_scenes || []).map((s: any, i: number) => ({ ...s, idx: `sh${i}` }));

@@ -21,6 +21,12 @@ SCENES = {  # scene type -> fields the AI must fill (the visual building blocks 
     "circuit": "(no fields) battery + LED + transistor switching the light on/off",
     "binary": "(no fields) 8 switches spelling 01001000, ON=1 OFF=0",
     "outro": "title (1-2 words), lines: 3 short strings",
+    "diagram": ("title (2-5 words), svg: a COMPLETE simple SVG diagram you draw yourself that explains exactly what the narration "
+                "says (e.g. server racks, airflow arrows, a chip, a pipeline). Use viewBox=\"0 0 1000 560\", only rect/circle/line/"
+                "path/polyline/polygon/text, stroke=\"#d6aa5c\" or \"#9fd3ff\" or \"#ecebe6\", fill=\"none\" or dark fills "
+                "like \"#13202e\", stroke-width 3-5, text fill=\"#ecebe6\" font-size 26-34, 4-12 labelled parts, no scripts/images/"
+                "styles. Use it for every 'how it works' moment that the other scenes cannot show."),
+    "photo": "query (2-5 words to search a real photo, e.g. 'data center server room'), label (2-5 words shown on the photo)",
 }
 log = lambda *a: print(*a, file=sys.stderr, flush=True)
 
@@ -91,6 +97,8 @@ STRUCTURE of the long film (3.5-5 minutes, 550-750 words of narration, 16-24 sce
 4. The core mechanism explained step by step with an analogy. 5. A deeper detail. 6. Real-world scale/impact.
 7. Recap in one line + "Follow GetYr Studio for more".
 Every scene must have a visual that SHOWS what the narration says. Vary scene types; never 3 "facts" in a row.
+Aim for about 30% "diagram" scenes (your own drawings of the specific thing explained), 15-25% "photo" scenes (real things
+the viewer should see), and the rest from the library. Use "facts" at most 3 times in the whole film.
 VISUAL RULES: "counter" only for a real, specific number from the sources. "depth" only for a real depth/height/length.
 "bars" only to compare real numbers. "timeline" only with real dates. Mechanism scenes (valve, silicon, mosfet,
 circuit, binary) only when the narration describes exactly that. "clock" only for a real time of day.
@@ -190,11 +198,63 @@ def clean_scene(s):
         s.setdefault("text", ""); s.setdefault("by", "")
     if t == "clock":
         s["time"] = str(s.get("time", "00:00"))[:5]; s.setdefault("label", "")
+    if t == "diagram":
+        svg = str(s.get("svg", ""))
+        svg = re.sub(r"<\s*(script|image|foreignObject|style)[^>]*>.*?<\s*/\s*\1\s*>", "", svg, flags=re.S | re.I)
+        svg = re.sub(r"\son\w+\s*=\s*\"[^\"]*\"", "", svg)
+        ok = svg.strip().startswith("<svg") and svg.strip().endswith("</svg>") and len(re.findall(r"<(rect|circle|line|path|polyline|polygon)", svg)) >= 3
+        if not ok:  # broken drawing -> safe fallback, never an empty frame
+            return {"type": "facts", "title": s.get("title", ""), "items": [s.get("title", "")], "narration": s["narration"]}
+        if "viewBox" not in svg:
+            svg = svg.replace("<svg", '<svg viewBox="0 0 1000 560"', 1)
+        s["svg"] = svg; s.setdefault("title", "")
+    if t == "photo":
+        s.setdefault("query", s.get("label", "")); s.setdefault("label", "")
     if t == "depth":
         try: s["depth"] = int(float(s.get("depth", 0)))
         except Exception: s["depth"] = 0
         s.setdefault("compare", "")
     return s
+
+
+OK_LICENCES = ("cc0", "public domain", "pd", "cc by", "cc-by")  # commercial use allowed (credit given)
+
+
+def fetch_photo(query, dest):
+    H = {"User-Agent": "GetYrStudio-explainer/1.0 (educational video research)"}
+    try:
+        r = httpx.get("https://commons.wikimedia.org/w/api.php", headers=H, timeout=30, params={
+            "action": "query", "generator": "search", "gsrsearch": f"{query} filetype:bitmap", "gsrnamespace": 6, "gsrlimit": 12,
+            "prop": "imageinfo", "iiprop": "url|extmetadata|size", "iiurlwidth": 1920, "format": "json"}).json()
+        pages = sorted(r.get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 99))
+        for p in pages:
+            ii = (p.get("imageinfo") or [{}])[0]; md = ii.get("extmetadata", {})
+            lic = md.get("LicenseShortName", {}).get("value", "").lower()
+            if not any(lic.startswith(x) or x in lic for x in OK_LICENCES) or "nc" in lic or "nd" in lic:
+                continue
+            if ii.get("width", 0) < 1000:
+                continue
+            img = httpx.get(ii.get("thumburl") or ii["url"], headers=H, timeout=60, follow_redirects=True)
+            open(dest, "wb").write(img.content)
+            artist = re.sub(r"<[^>]+>", "", md.get("Artist", {}).get("value", "unknown"))[:60]
+            return f"Photo: {artist} / Wikimedia Commons ({md.get('LicenseShortName', {}).get('value', '')})"
+    except Exception as exc:
+        log("photo search failed:", query, exc)
+    return None
+
+
+def attach_photos(ep, public_dir="public"):
+    os.makedirs(f"{public_dir}/img", exist_ok=True); credits = []
+    for group in ("scenes", "short_scenes"):
+        for i, s in enumerate(ep.get(group, [])):
+            if s["type"] != "photo":
+                continue
+            name = f"img/{group[0]}{i}.jpg"; c = fetch_photo(s.get("query", ""), f"{public_dir}/{name}")
+            if c:
+                s["file"] = name; s["credit"] = c; credits.append(c); log("photo:", s.get("query"), "->", c)
+            else:  # no free photo -> keep the scene meaningful as a fact card
+                s.update({"type": "facts", "title": s.get("label", ""), "items": [s.get("label", "")]})
+    ep["credits"] = sorted(set(credits))
 
 
 def main():
@@ -204,6 +264,7 @@ def main():
     ep["scenes"] = [clean_scene(s) for s in ep.get("scenes", []) if s.get("narration")]
     ep["short_scenes"] = [clean_scene(s) for s in ep.get("short_scenes", []) if s.get("narration")]
     ep.setdefault("title", topic); ep["tag"] = ep.get("tag") or tag
+    attach_photos(ep)
     ep["voice"] = "en-US-AndrewMultilingualNeural"; ep["rate"] = "+4%"; ep["short"] = []
     words = sum(len(s["narration"].split()) for s in ep["scenes"])
     log(f"final: {len(ep['scenes'])} scenes, {words} words; short {len(ep['short_scenes'])} scenes")

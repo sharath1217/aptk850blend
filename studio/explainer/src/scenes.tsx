@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate } from "remotion";
+import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, staticFile } from "remotion";
 import { geoMercator, geoPath, geoGraticule10 } from "d3-geo";
 import { feature } from "topojson-client";
 import land50 from "world-atlas/land-50m.json";
@@ -392,6 +392,39 @@ export const Binary: React.FC<any> = ({ dur }) => {
       </div>
       <div style={{ fontFamily: SANS, fontSize: 36 * u, color: C.text, marginTop: 50 * u, opacity: fade(f, dur * 0.55) }}>
         {tall ? "ON = 1 · OFF = 0" : "8 switches → 01001000 → the letter “H”"}</div>
+    </AbsoluteFill>
+  );
+};
+
+// ================================================================ AI-made visuals
+// A diagram drawn by the AI (SVG code). We animate it: strokes draw on, shapes and labels fade in, in our colours.
+export const Diagram: React.FC<any> = ({ svg, title, dur }) => {
+  const f = useCurrentFrame(); const { u, tall } = useU();
+  const p = prog(f, 4, Math.max(30, dur * 0.55), ease), t = prog(f, dur * 0.25, dur * 0.6, ease);
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <style>{`.aidiag svg{width:100%;height:100%;overflow:visible}
+        .aidiag svg *{stroke-dasharray:1200;stroke-dashoffset:calc(1200*(1 - var(--p)))}
+        .aidiag svg text{opacity:var(--t);stroke-dasharray:none;stroke-dashoffset:0;font-family:Inter,Helvetica,sans-serif}`}</style>
+      {title && <div style={{ position: "absolute", top: tall ? "12%" : "7%", fontFamily: SERIF, fontSize: 56 * u, color: C.text, opacity: fade(f, 0) }}>{title}</div>}
+      <div className="aidiag" style={{ width: tall ? "92%" : "74%", height: tall ? "52%" : "66%", ["--p" as any]: p, ["--t" as any]: t }}
+        dangerouslySetInnerHTML={{ __html: svg }} />
+    </AbsoluteFill>
+  );
+};
+
+// A real photo (Wikimedia Commons, licence-checked) with a slow cinematic push-in and a label.
+export const Photo: React.FC<any> = ({ file, label, credit, dur }) => {
+  const f = useCurrentFrame(); const { u } = useU();
+  const z = interpolate(f, [0, dur], [1.06, 1.18]); const x = interpolate(f, [0, dur], [-1.5, 1.5]);
+  return (
+    <AbsoluteFill>
+      {file && <img src={staticFile(file)} style={{ position: "absolute", width: "100%", height: "100%", objectFit: "cover",
+        transform: `scale(${z}) translateX(${x}%)`, filter: "saturate(0.9) contrast(1.05) brightness(0.8)" }} />}
+      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(5,7,11,0.15) 40%, rgba(5,7,11,0.85) 100%)" }} />
+      {label && <div style={{ position: "absolute", left: "7%", top: "8%", fontFamily: SANS, fontSize: 34 * u, letterSpacing: 4 * u,
+        color: C.gold2, opacity: fade(f, 6), borderLeft: `4px solid ${C.gold}`, paddingLeft: 16 * u }}>{label}</div>}
+      {credit && <div style={{ position: "absolute", right: "2%", top: "2%", fontFamily: SANS, fontSize: 14 * u, color: "rgba(255,255,255,0.55)" }}>{credit}</div>}
     </AbsoluteFill>
   );
 };
