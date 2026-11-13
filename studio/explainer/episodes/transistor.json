@@ -1,0 +1,161 @@
+{
+ "title": "How a Transistor Works",
+ "tag": "GETYR STUDIO · TECH",
+ "voice": "en-US-AndrewMultilingualNeural",
+ "rate": "+4%",
+ "short": [
+  0,
+  4,
+  7,
+  8,
+  9,
+  14
+ ],
+ "short_hook": "Your phone has 19 billion tiny switches.",
+ "scenes": [
+  {
+   "type": "title",
+   "kicker": "GETYR STUDIO · TECH",
+   "title": "TRANSISTOR",
+   "subtitle": "The Tiny Switch That Runs the World",
+   "narration": "Everything you do on your phone, every photo, every message, every video, comes down to one tiny thing. A switch. Flipping on and off, billions of times a second."
+  },
+  {
+   "type": "counter",
+   "value": 19000000000,
+   "label": "transistors",
+   "sub": "in Apple's A17 Pro phone chip (2023)",
+   "narration": "That switch is called a transistor. And the chip in a modern phone has about nineteen billion of them. So how does something that small actually work? Let's find out."
+  },
+  {
+   "type": "facts",
+   "title": "Before transistors: ENIAC, 1945",
+   "items": [
+    "About 17,500 vacuum tubes",
+    "Around 27 tonnes",
+    "Tubes burned out constantly"
+   ],
+   "narration": "First, a quick trip back in time. Early computers like ENIAC used vacuum tubes as switches. Glass bulbs that got hot, used tons of power, and burned out all the time. ENIAC filled a whole room and weighed around twenty seven tonnes."
+  },
+  {
+   "type": "timeline",
+   "events": [
+    {
+     "time": "1947",
+     "label": "First transistor, Bell Labs"
+    },
+    {
+     "time": "1956",
+     "label": "Nobel Prize in Physics"
+    },
+    {
+     "time": "1959",
+     "label": "The MOSFET"
+    },
+    {
+     "time": "1971",
+     "label": "Intel 4004 chip"
+    }
+   ],
+   "narration": "Then, in 1947, three scientists at Bell Labs built the first transistor. It did the same job as a vacuum tube, but it was tiny, cool, and almost never wore out. They won the Nobel Prize for it in 1956."
+  },
+  {
+   "type": "valve",
+   "labels": [
+    "power in",
+    "the control",
+    "power out"
+   ],
+   "narration": "Here's the simplest way to think about it. Imagine a water pipe with a tap. A tiny turn of the tap controls a big flow of water. A transistor does exactly that, but with electricity. A tiny signal controls a much bigger current."
+  },
+  {
+   "type": "silicon",
+   "narration": "The magic material is silicon. On its own, pure silicon barely conducts electricity. But add a tiny amount of phosphorus, and you get extra free electrons. Add boron instead, and you get gaps called holes. This trick is called doping."
+  },
+  {
+   "type": "mosfet",
+   "narration": "Now stack those regions together. Most chips today use a design called a MOSFET. It has a source, a drain, and a gate on top, separated by a thin insulating layer. With no voltage on the gate, nothing flows.",
+   "state": "off"
+  },
+  {
+   "type": "mosfet",
+   "narration": "But put a small voltage on the gate, and it pulls electrons into a thin channel right under it. Suddenly there's a bridge. Current rushes from source to drain. Remove the voltage, and the bridge disappears. On. Off. On. Off."
+  },
+  {
+   "type": "circuit",
+   "narration": "So in a circuit, a transistor works like a light switch with no moving parts. A small signal on the control pin turns the light on. Take it away, and the light goes off."
+  },
+  {
+   "type": "binary",
+   "narration": "And here's why that matters. On can mean one, and off can mean zero. Line up eight transistors and you can store a letter. This pattern is the letter H."
+  },
+  {
+   "type": "facts",
+   "title": "From switches to thinking",
+   "items": [
+    "Switches → logic gates (AND, OR, NOT)",
+    "Logic gates → adders and memory",
+    "Billions of them → a processor"
+   ],
+   "narration": "Connect a few transistors together and you get logic gates, little circuits that make simple decisions. Connect gates together, and you can add numbers and remember them. Do that billions of times, and you've built a processor."
+  },
+  {
+   "type": "timeline",
+   "events": [
+    {
+     "time": "1971",
+     "label": "Intel 4004 · 2,300"
+    },
+    {
+     "time": "1989",
+     "label": "Intel 486 · 1.2 million"
+    },
+    {
+     "time": "2006",
+     "label": "Core 2 Duo · 291 million"
+    },
+    {
+     "time": "2023",
+     "label": "A17 Pro · 19 billion"
+    }
+   ],
+   "narration": "In 1971, Intel's first microprocessor had about two thousand three hundred transistors. Engineers kept shrinking them, roughly doubling the count every two years. That's Moore's Law. Today, a phone chip has around nineteen billion."
+  },
+  {
+   "type": "facts",
+   "title": "How small?",
+   "items": [
+    "Thousands of times thinner than a human hair",
+    "Built in layers just a few atoms thick",
+    "Switching billions of times per second"
+   ],
+   "narration": "How small are they now? Modern transistors are thousands of times thinner than a human hair, with some layers just a few atoms thick. And they switch on and off billions of times every second."
+  },
+  {
+   "type": "facts",
+   "title": "The most-made thing ever",
+   "items": [
+    "~13 sextillion MOSFETs made (estimate, by 2018)",
+    "13,000,000,000,000,000,000,000",
+    "More than the stars in our galaxy — by far"
+   ],
+   "narration": "In fact, the MOSFET is the most manufactured device in human history. By one estimate, humans had made around thirteen sextillion of them by 2018. That's far more than the stars in our galaxy."
+  },
+  {
+   "type": "quote",
+   "text": "A tiny signal controls a big current. Billions of times a second.",
+   "by": "the whole idea, in one line",
+   "narration": "So next time you scroll, play a game, or send a message, remember what's really happening. Billions of tiny switches, flipping on and off, faster than you can imagine."
+  },
+  {
+   "type": "outro",
+   "title": "TRANSISTOR",
+   "lines": [
+    "Invented 1947",
+    "Silicon + doping",
+    "On = 1 · Off = 0"
+   ],
+   "narration": "That's the transistor. The tiny switch that runs the world. Follow GetYr Studio for more simple explanations of how things work."
+  }
+ ]
+}

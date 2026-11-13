@@ -135,11 +135,11 @@ export const MapScene: React.FC<any> = ({ view, route, dur }) => {
 
 // ---------------------------------------------------------------- big number
 export const Counter: React.FC<any> = ({ value, label, sub, dur }) => {
-  const f = useCurrentFrame(); const { u } = useU();
+  const f = useCurrentFrame(); const { u, tall } = useU();
   const n = Math.round(value * prog(f, 4, Math.min(40, dur * 0.4), ease));
   return (
     <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-      <div style={{ fontFamily: SERIF, fontSize: 260 * u, color: C.gold2, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{n.toLocaleString("en-US")}</div>
+      <div style={{ fontFamily: SERIF, fontSize: Math.min(260, 1500 / Math.max(4, n.toLocaleString("en-US").length)) * u * (tall ? 0.8 : 1), color: C.gold2, fontVariantNumeric: "tabular-nums", lineHeight: 1 }}>{n.toLocaleString("en-US")}</div>
       <div style={{ fontFamily: SANS, fontSize: 44 * u, color: C.text, marginTop: 20 * u, opacity: fade(f, 30), letterSpacing: 2 * u }}>{label}</div>
       <div style={{ fontFamily: SANS, fontSize: 30 * u, color: C.dim, marginTop: 10 * u, opacity: fade(f, 50) }}>{sub}</div>
     </AbsoluteFill>
@@ -270,6 +270,126 @@ export const Depth: React.FC<any> = ({ depth = 3800, compare, dur }) => {
         {Math.round(depth * p).toLocaleString("en-US")} m</div>
       <div style={{ position: "absolute", left: "53%", top: y + 50 * u, fontFamily: SANS, fontSize: 30 * u, color: C.dim, opacity: fade(f, dur * 0.7) }}>{compare}</div>
       <div style={{ position: "absolute", left: "8%", top: top - 50 * u, fontFamily: SANS, fontSize: 26 * u, letterSpacing: 6 * u, color: C.ice }}>SEA LEVEL</div>
+    </AbsoluteFill>
+  );
+};
+
+// ================================================================ electronics scenes
+const Electrons: React.FC<{ d: string; on: number; color?: string; n?: number; speed?: number }> = ({ d, on, color = C.ice, n = 14, speed = 0.012 }) => {
+  const f = useCurrentFrame();
+  return <g opacity={on}>{Array.from({ length: n }, (_, i) => (
+    <circle key={i} r="5" fill={color} style={{ offsetPath: `path('${d}')`, offsetDistance: `${((i / n + f * speed) % 1) * 100}%` } as any} />))}</g>;
+};
+
+// water pipe with a tap: the transistor analogy
+export const Valve: React.FC<any> = ({ labels = [], dur }) => {
+  const f = useCurrentFrame(); const { u, tall } = useU();
+  const open = interpolate(f, [0, dur * 0.2, dur * 0.35, dur * 0.6, dur * 0.75, dur], [0, 0, 1, 1, 0, 0], { easing: inOut });
+  const pipe = "M80,260 L920,260";
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <svg viewBox="0 0 1000 520" style={{ width: tall ? "96%" : "70%" }}>
+        <rect x="80" y="225" width="840" height="70" rx="12" fill="#13202e" stroke={C.dim} />
+        <g transform={`translate(500,260)`}>
+          <rect x="-40" y={-35 + open * 60} width="80" height="70" fill="#2b3b4f" stroke={C.gold} />
+          <rect x="-8" y={-150} width="16" height={115 + open * 60} fill={C.gold} />
+          <rect x="-60" y={-170 + open * 60} width="120" height="20" rx="8" fill={C.gold2} />
+        </g>
+        <Electrons d={pipe} on={open} n={22} speed={0.01} />
+        <text x="500" y="70" textAnchor="middle" fill={C.gold2} fontFamily={SANS} fontSize="30">{open > 0.5 ? "SMALL PUSH → BIG FLOW" : "NO PUSH → NO FLOW"}</text>
+        {labels.map((l: string, i: number) => <text key={i} x={[120, 500, 880][i]} y="370" textAnchor="middle" fill={C.text} fontFamily={SANS} fontSize="28">{l}</text>)}
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+// silicon crystal + doping
+export const Silicon: React.FC<any> = ({ dur }) => {
+  const f = useCurrentFrame(); const { tall } = useU();
+  const dope = prog(f, dur * 0.35, dur * 0.55);
+  const cells = [];
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 9; c++) {
+    const P = (r === 1 && c === 2) || (r === 3 && c === 6), B = (r === 2 && c === 4);
+    cells.push({ x: 120 + c * 95, y: 90 + r * 85, P, B });
+  }
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <svg viewBox="0 0 1000 560" style={{ width: tall ? "98%" : "72%" }}>
+        {cells.map((p, i) => <g key={i}>
+          {i % 9 !== 8 && <line x1={p.x} y1={p.y} x2={p.x + 95} y2={p.y} stroke={C.dim} strokeOpacity="0.4" />}
+          {i < 36 && <line x1={p.x} y1={p.y} x2={p.x} y2={p.y + 85} stroke={C.dim} strokeOpacity="0.4" />}
+          <circle cx={p.x} cy={p.y} r="22" fill={(p.P || p.B) && dope > 0.5 ? (p.P ? "#3b6ea5" : "#a5623b") : "#1d2a38"} stroke={C.landEdge} />
+          <text x={p.x} y={p.y + 7} textAnchor="middle" fill={C.text} fontFamily={SANS} fontSize="18">{(p.P || p.B) && dope > 0.5 ? (p.P ? "P" : "B") : "Si"}</text>
+          {p.P && dope > 0.5 && <circle cx={p.x + 34 + 10 * Math.sin(f / 5)} cy={p.y - 30} r="7" fill={C.ice} />}
+          {p.B && dope > 0.5 && <circle cx={p.x + 34} cy={p.y - 30} r="7" fill="none" stroke={C.gold2} strokeWidth="3" />}
+        </g>)}
+        <text x="500" y="535" textAnchor="middle" fill={C.gold2} fontFamily={SANS} fontSize="28" opacity={dope}>Phosphorus adds a free electron · Boron leaves a "hole"</text>
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+// MOSFET cross-section: gate voltage pulls electrons into a channel
+export const Mosfet: React.FC<any> = ({ dur, state }) => {
+  const f = useCurrentFrame(); const { tall } = useU();
+  const on = state === "off" ? 0 : interpolate(f, [0, dur * 0.25, dur * 0.4, dur * 0.8, dur * 0.9], [0, 0, 1, 1, 0], { extrapolateRight: "clamp", easing: inOut });
+  const chan = "M260,300 L740,300";
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <svg viewBox="0 0 1000 600" style={{ width: tall ? "98%" : "70%" }}>
+        <rect x="120" y="270" width="760" height="260" fill="#3a2a22" stroke={C.landEdge} />
+        <text x="500" y="500" textAnchor="middle" fill={C.dim} fontFamily={SANS} fontSize="24">silicon (p-type)</text>
+        {[[150, "SOURCE"], [690, "DRAIN"]].map(([x, t]: any) => <g key={t}>
+          <rect x={x} y="270" width="160" height="90" fill="#24456b" /><rect x={x + 40} y="200" width="80" height="70" fill="#9aa4ad" />
+          <text x={x + 80} y="185" textAnchor="middle" fill={C.text} fontFamily={SANS} fontSize="26">{t}</text></g>)}
+        <rect x="320" y="250" width="360" height="20" fill="#d9e2ea" opacity="0.6" />
+        <rect x="330" y="190" width="340" height="60" fill={on > 0.5 ? C.gold : "#6d7782"} />
+        <text x="500" y="175" textAnchor="middle" fill={on > 0.5 ? C.gold2 : C.text} fontFamily={SANS} fontSize="28">GATE {on > 0.5 ? "+ voltage ON" : "off"}</text>
+        <rect x="310" y="278" width="380" height="40" fill={C.ice} opacity={0.25 * on} />
+        <Electrons d={chan} on={on} n={16} speed={0.015} />
+        <text x="500" y="580" textAnchor="middle" fill={C.gold2} fontFamily={SANS} fontSize="28" opacity={on}>a channel opens → current flows</text>
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+// simple circuit: battery, transistor, LED; the transistor switches the LED
+export const Circuit: React.FC<any> = ({ dur }) => {
+  const f = useCurrentFrame(); const { tall } = useU();
+  const on = Math.floor((f / Math.max(1, dur)) * 6) % 2 === 1 ? 1 : 0;
+  const loop = "M150,120 L850,120 L850,460 L150,460 Z";
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
+      <svg viewBox="0 0 1000 600" style={{ width: tall ? "98%" : "66%" }}>
+        <path d={loop} fill="none" stroke={C.dim} strokeWidth="5" />
+        <rect x="120" y="250" width="60" height="90" fill="#1d2a38" stroke={C.gold} /><text x="150" y="380" textAnchor="middle" fill={C.text} fontFamily={SANS} fontSize="22">battery</text>
+        <circle cx="500" cy="120" r="45" fill={on ? "#ffd27a" : "#2a2f36"} style={{ filter: on ? "drop-shadow(0 0 30px #ffcc66)" : "none" }} />
+        <text x="500" y="200" textAnchor="middle" fill={C.text} fontFamily={SANS} fontSize="24">LED</text>
+        <rect x="800" y="250" width="100" height="100" rx="12" fill="#1d2a38" stroke={on ? C.gold : C.dim} strokeWidth="4" />
+        <text x="850" y="308" textAnchor="middle" fill={on ? C.gold2 : C.text} fontFamily={SANS} fontSize="22">transistor</text>
+        <line x1="900" y1="300" x2="980" y2="300" stroke={on ? C.gold : C.dim} strokeWidth="4" />
+        <text x="960" y="280" textAnchor="end" fill={on ? C.gold2 : C.dim} fontFamily={SANS} fontSize="20">{on ? "signal: 1" : "signal: 0"}</text>
+        <Electrons d={loop} on={on} n={26} speed={0.008} />
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+// binary: switches = 1s and 0s
+export const Binary: React.FC<any> = ({ dur }) => {
+  const f = useCurrentFrame(); const { u, tall } = useU();
+  const n = tall ? 6 : 8; const word = "01001000";
+  const shown = Math.floor(prog(f, 5, dur * 0.5) * n);
+  return (
+    <AbsoluteFill style={{ alignItems: "center", justifyContent: "center", textAlign: "center" }}>
+      <div style={{ display: "flex", gap: 22 * u }}>
+        {Array.from({ length: n }, (_, i) => { const bit = word[i % 8] === "1"; const vis = i < shown;
+          return <div key={i} style={{ width: 90 * u, height: 140 * u, borderRadius: 14 * u, border: `3px solid ${bit && vis ? C.gold : C.landEdge}`,
+            background: bit && vis ? "rgba(214,170,92,0.18)" : "transparent", display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: SERIF, fontSize: 80 * u, color: bit ? C.gold2 : C.dim, opacity: vis ? 1 : 0.15 }}>{vis ? (bit ? 1 : 0) : ""}</div>; })}
+      </div>
+      <div style={{ fontFamily: SANS, fontSize: 36 * u, color: C.text, marginTop: 50 * u, opacity: fade(f, dur * 0.55) }}>
+        {tall ? "ON = 1 · OFF = 0" : "8 switches → 01001000 → the letter “H”"}</div>
     </AbsoluteFill>
   );
 };

@@ -1,13 +1,13 @@
 import React from "react";
 import { AbsoluteFill, Audio, Composition, Sequence, staticFile, useCurrentFrame, interpolate } from "remotion";
 import { Frame } from "./Frame";
-import { Title, Ship, MapScene, Counter, Bars, Facts, Clock, Timeline, Quote, Outro, Depth } from "./scenes";
+import { Title, Ship, MapScene, Counter, Bars, Facts, Clock, Timeline, Quote, Outro, Depth, Valve, Silicon, Mosfet, Circuit, Binary } from "./scenes";
 import { C, SERIF, SANS, fade } from "./theme";
 import sample from "../episodes/titanic.json";
 
 const FPS = 30;
 const SCENES: Record<string, React.FC<any>> = { title: Title, ship: Ship, map: MapScene, counter: Counter, bars: Bars,
-  facts: Facts, clock: Clock, timeline: Timeline, quote: Quote, outro: Outro, depth: Depth };
+  facts: Facts, clock: Clock, timeline: Timeline, quote: Quote, outro: Outro, depth: Depth, valve: Valve, silicon: Silicon, mosfet: Mosfet, circuit: Circuit, binary: Binary };
 const framesOf = (s: any) => s.frames || Math.round((s.narration.split(" ").length / 2.4 + 1.2) * FPS);
 
 const Film: React.FC<{ ep: any; pick?: number[]; hook?: string }> = ({ ep, pick, hook }) => {
@@ -15,7 +15,7 @@ const Film: React.FC<{ ep: any; pick?: number[]; hook?: string }> = ({ ep, pick,
   let at = hook ? 75 : 0;
   return (
     <AbsoluteFill style={{ background: C.bg0 }}>
-      {hook && <Sequence durationInFrames={75}><Hook text={hook} /></Sequence>}
+      {hook && <Sequence durationInFrames={75}><Hook text={hook} tag={ep.tag} /></Sequence>}
       {scenes.map((s: any) => {
         const d = framesOf(s); const from = at; at += d; const Comp = SCENES[s.type];
         return (
@@ -29,11 +29,11 @@ const Film: React.FC<{ ep: any; pick?: number[]; hook?: string }> = ({ ep, pick,
   );
 };
 
-const Hook: React.FC<{ text: string }> = ({ text }) => {
+const Hook: React.FC<{ text: string; tag?: string }> = ({ text, tag = "GETYR STUDIO" }) => {
   const f = useCurrentFrame();
   return <AbsoluteFill style={{ background: C.bg0, alignItems: "center", justifyContent: "center", textAlign: "center", padding: "0 8%" }}>
     <div style={{ fontFamily: SERIF, fontSize: 92, color: C.text, opacity: fade(f, 0, 12), transform: `scale(${interpolate(f, [0, 75], [1.1, 1])})` }}>{text}</div>
-    <div style={{ fontFamily: SANS, fontSize: 34, letterSpacing: 8, color: C.gold, marginTop: 40, opacity: fade(f, 20) }}>TITANIC · 1912</div>
+    <div style={{ fontFamily: SANS, fontSize: 34, letterSpacing: 8, color: C.gold, marginTop: 40, opacity: fade(f, 20) }}>{tag}</div>
   </AbsoluteFill>;
 };
 
