@@ -1,0 +1,32 @@
+How AI Data Centers Work
+
+[00 title] If you've ever asked an AI a question, you've used a data center. But have you seen inside?
+[01 facts] These facilities look like warehouses, but they run the modern world. They are the new power plants.
+[02 counter] A single rack holds about 8000 servers. That is a room full of computers working in unison.
+[03 diagram] These servers are stacked like shelves. They hold the brains of the AI, the GPUs, doing the heavy lifting.
+[04 valve] Think of a valve. You turn the handle—your question—and water flows through. The AI model controls the flow of data to give you an answer.
+[05 facts] Inside, rows of machines stretch out. They need constant air to not overheat. Heat is the enemy of the chip.
+[06 diagram] Data centers use a hot/cold aisle design. Cold air is pumped in from the front, and hot air is exhausted from the back. It keeps the chips running fast.
+[07 facts] These places eat electricity. The cooling fans and pumps use almost as much power as the computers doing the math.
+[08 diagram] Inside the chip, data moves in a pipeline. It goes in, gets processed, hits memory, and spits out an answer. That is how a question becomes text.
+[09 timeline] It took decades to get here. From big mainframes in the 60s to the chatbots we use today. Each step made the data centers bigger.
+[10 facts] Those big towers outside? They dump the heat from the building into the sky. Water carries the heat away from the servers.
+[11 counter] We have over 200 major sites doing this. From Virginia to Taiwan, the infrastructure is global.
+[12 depth] Some new data centers use liquid cooling. It is 10 times more efficient at pulling heat away than just blasting air.
+[13 quote] This quote sums up the challenge. We build bigger centers, but AI models get hungrier every year.
+[14 bars] A single AI query uses about 0.001 kWh. That is less than a Google search, but because millions do it, the total adds up fast.
+[15 valve] Here is the trick: the GPU cluster is the control knob. A small request can trigger a massive amount of processing power behind the scenes.
+[16 silicon] The chip itself is made of silicon. Engineers add tiny amounts of phosphorus or boron to create paths for electricity to flow, turning the material into a transistor.
+[17 mosfet] When a voltage hits the gate, the channel opens. Electrons flood through from source to drain. This is the switch that does the math.
+[18 circuit] A battery pushes power through a transistor to light an LED. In a data center, millions of these circuits switch on and off billions of times a second.
+[19 binary] Inside, everything is 0s and 1s. Eight switches spell out a byte. The AI reads these patterns to understand language.
+[20 diagram] These servers don't work alone. They are networked together, passing data back and forth like a hive, splitting the load so one machine isn't overwhelmed.
+[21 outro] So next time you ask AI something, remember the silent building working behind the scenes.
+
+--- SHORT ---
+[title] One query uses enough power to light an LED bulb for several minutes.
+[counter] Racks are packed tight, 500 servers strong, working night and day.
+[valve] It is a flow. Your request triggers the valve, the GPU works, and out pops the text.
+[facts] Input goes in, the chip processes, and output comes out. That is the whole loop.
+[facts] Massive fans pull air through the aisles to stop the chips from melting.
+[outro] Smart, right? Now you know the secret.
