@@ -5,7 +5,7 @@ Two passes: writer -> editor/fact-checker. Free NVIDIA API (NVIDIA_API_KEY)."""
 import json, os, re, sys, time
 import httpx
 
-MODEL = os.environ.get("LLM_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b")
+MODELS = [m for m in os.environ.get("LLM_MODELS", "meta/llama-3.3-70b-instruct,nvidia/llama-3.3-nemotron-super-49b-v1,nvidia/nemotron-3.5-lightning-30b-a3b").split(",") if m]
 SCENES = {  # scene type -> fields the AI must fill (the visual building blocks we have)
     "title": "kicker (short caps tag), title (1-3 words), subtitle (short line)",
     "counter": "value (integer), label (what is counted), sub (context line)",
@@ -26,14 +26,15 @@ log = lambda *a: print(*a, file=sys.stderr, flush=True)
 
 
 def llm(prompt, temperature=0.7):
-    for attempt in range(5):
+    for attempt in range(6):
+        model = MODELS[min(attempt // 2, len(MODELS) - 1)]
         try:
             r = httpx.post("https://integrate.api.nvidia.com/v1/chat/completions", timeout=600,
                            headers={"Authorization": f"Bearer {os.environ['NVIDIA_API_KEY']}"},
-                           json={"model": MODEL, "temperature": temperature, "max_tokens": 14000,
+                           json={"model": model, "temperature": temperature, "max_tokens": 8000,
                                  "messages": [{"role": "user", "content": prompt}],
                                  "chat_template_kwargs": {"thinking": False, "enable_thinking": False}})
-            r.raise_for_status(); return r.json()["choices"][0]["message"]["content"]
+            r.raise_for_status(); log("model:", model); return r.json()["choices"][0]["message"]["content"]
         except Exception as exc:
             log("LLM retry:", str(exc)[:200]); time.sleep(10 * (attempt + 1))
     raise SystemExit("LLM unavailable")
@@ -56,9 +57,32 @@ Concrete analogies from daily life. No filler, no "In this video we will". Every
 ACCURACY: only well-established facts. If a number is approximate say "about". Never invent quotes, names or numbers."""
 
 
+def research(topic):
+    """Facts come from sources, not from the model's memory: Wikipedia search -> top articles' text."""
+    H = {"User-Agent": "GetYrStudio-explainer/1.0 (educational video research)"}
+    try:
+        q = httpx.get("https://en.wikipedia.org/w/api.php", headers=H, timeout=30, params={
+            "action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 3}).json()
+        titles = [h["title"] for h in q["query"]["search"]]
+        text = []
+        for t in titles:
+            p = httpx.get("https://en.wikipedia.org/w/api.php", headers=H, timeout=30, params={
+                "action": "query", "prop": "extracts", "explaintext": 1, "titles": t, "format": "json"}).json()
+            page = next(iter(p["query"]["pages"].values())).get("extract", "")
+            text.append(f"### {t} (Wikipedia)\n{page[:9000]}")
+        log("research:", titles)
+        return "\n\n".join(text)
+    except Exception as exc:
+        log("research failed:", exc); return ""
+
+
 def write(topic, tag):
+    src = research(topic)
     prompt = f"""You write narration + visual plans for a premium animated explainer channel ("GetYr Studio").
 TOPIC: {topic}
+
+SOURCE MATERIAL (use ONLY facts, numbers and dates found here; if something is not here, do not state it as fact):
+{src or "(no sources found - use only very well-established facts)"}
 
 {VOICE_RULES}
 
@@ -67,6 +91,9 @@ STRUCTURE of the long film (3.5-5 minutes, 550-750 words of narration, 16-24 sce
 4. The core mechanism explained step by step with an analogy. 5. A deeper detail. 6. Real-world scale/impact.
 7. Recap in one line + "Follow GetYr Studio for more".
 Every scene must have a visual that SHOWS what the narration says. Vary scene types; never 3 "facts" in a row.
+VISUAL RULES: "counter" only for a real, specific number from the sources. "depth" only for a real depth/height/length.
+"bars" only to compare real numbers. "timeline" only with real dates. Mechanism scenes (valve, silicon, mosfet,
+circuit, binary) only when the narration describes exactly that. "clock" only for a real time of day.
 
 ALSO write a SEPARATE Short/Reel (vertical, 30-50 seconds, 80-130 words, 5-7 scenes): its own punchy script,
 hook in the first sentence, fast, ends with a line that loops back to the start. Not a copy of the film's lines.
@@ -79,9 +106,38 @@ Return ONLY JSON:
   "scenes": [{{"type": "title", "kicker": "...", "title": "...", "subtitle": "...", "narration": "..."}}, ...],
   "short_scenes": [{{"type": "...", ..., "narration": "..."}}, ...]}}"""
     ep = ask_json(prompt, 0.8)
-    log("draft:", len(ep.get("scenes", [])), "scenes,", len(ep.get("short_scenes", [])), "short scenes")
+    words = lambda e: sum(len(str(x.get("narration", "")).split()) for x in e.get("scenes", []))
+    log("draft:", len(ep.get("scenes", [])), "scenes,", words(ep), "words")
+    for attempt in range(3):  # too short / thin -> send it back to be expanded
+        if words(ep) >= 520 and len(ep.get("scenes", [])) >= 15:
+            break
+        ep2 = ask_json(f"""This explainer script is too short ({words(ep)} words, {len(ep.get('scenes', []))} scenes).
+Expand it to 600-750 words and 16-24 scenes WITHOUT padding: add the missing parts of the structure
+(hook, why it matters, history with real dates, step-by-step mechanism, a deeper detail, real-world scale with real numbers, recap).
+Keep the same style rules, scene library and JSON format. Keep the separate Short (80-130 words).
+
+{VOICE_RULES}
+
+SOURCE MATERIAL:
+{src[:12000]}
+
+ALLOWED SCENES:
+{LIB}
+
+EPISODE:
+{json.dumps(ep, ensure_ascii=False)}
+
+Return ONLY the expanded JSON.""", 0.6)
+        log("expanded:", len(ep2.get("scenes", [])), "scenes,", words(ep2), "words")
+        if words(ep2) > words(ep):
+            ep = ep2
     review = f"""You are the editor and fact-checker of an explainer channel. Improve this episode JSON for the topic "{topic}".
-Check every fact and number; fix or remove anything wrong or uncertain (prefer "about"). Make the narration sound more
+Check every fact and number AGAINST THE SOURCES below; fix or remove anything wrong, not in the sources, or uncertain (prefer "about").
+Also check: counters show a real number, the mechanism is described correctly (e.g. switching is not amplification), and the
+Short has real substance (80-130 words) with a strong first line.
+
+SOURCES:
+{src[:12000]} Make the narration sound more
 human and natural (see rules), cut filler, keep the first sentence a strong hook. Make sure each scene's visual matches
 its narration and uses only the allowed scene types/fields. Keep the same JSON format.
 
@@ -96,7 +152,7 @@ EPISODE:
 Return ONLY the corrected JSON."""
     try:
         ep2 = ask_json(review, 0.3)
-        if len(ep2.get("scenes", [])) >= 0.7 * len(ep.get("scenes", [])):
+        if len(ep2.get("scenes", [])) >= 0.85 * len(ep.get("scenes", [])) and words(ep2) >= 0.85 * words(ep):
             ep = ep2
     except SystemExit:
         log("editor pass failed, keeping the draft")
