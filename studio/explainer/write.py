@@ -94,7 +94,7 @@ ACCURACY: only well-established facts. If a number is approximate say "about". N
 
 def research(topic):
     """Facts come from sources, not from the model's memory: Wikipedia search -> top articles' text."""
-    H = {"User-Agent": "GetYrStudioExplainer/1.0 (open-source educational video tool; python-httpx)", "Accept": "application/json"}
+    H = {"User-Agent": "GetYrStudioExplainer/1.0 (+https://github.com/sharath1217/aptk850blend) python-httpx", "Accept": "application/json"}
     try:
         r0 = httpx.get("https://en.wikipedia.org/w/api.php", headers=H, timeout=30, params={
             "action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 3})
@@ -269,7 +269,7 @@ OK_LICENCES = ("cc0", "public domain", "pd", "cc by", "cc-by")  # commercial use
 
 
 def fetch_photo(query, dest):
-    H = {"User-Agent": "GetYrStudioExplainer/1.0 (open-source educational video tool; python-httpx)", "Accept": "application/json"}
+    H = {"User-Agent": "GetYrStudioExplainer/1.0 (+https://github.com/sharath1217/aptk850blend) python-httpx", "Accept": "application/json"}
     try:
         rr = httpx.get("https://commons.wikimedia.org/w/api.php", headers=H, timeout=30, params={
             "action": "query", "generator": "search", "gsrsearch": f"{query} filetype:bitmap", "gsrnamespace": 6, "gsrlimit": 12,
