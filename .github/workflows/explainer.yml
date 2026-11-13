@@ -3,8 +3,11 @@ name: Explainer video
 on:
   workflow_dispatch:
     inputs:
+      topic:
+        description: "A topic: the AI writes the whole video + Short (leave empty to use an episode file)"
+        default: ""
       episode:
-        description: "Episode file in studio/explainer/episodes/"
+        description: "...or an episode file in studio/explainer/episodes/"
         default: "titanic.json"
 
 permissions:
@@ -27,8 +30,17 @@ jobs:
           pip install edge-tts
           command -v ffmpeg || (pip install imageio-ffmpeg && sudo ln -sf "$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg)
           command -v ffprobe || sudo apt-get install -y ffmpeg
+      - name: AI writes the script (film + separate Short)
+        if: inputs.topic != ''
+        env:
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          TOPIC: ${{ inputs.topic }}
+        run: |
+          pip install httpx
+          python write.py "$TOPIC" episodes/ai_episode.json
+          cat episodes/ai_episode.txt >> "$GITHUB_STEP_SUMMARY"
       - name: Voice, timing and music
-        run: python voice.py "episodes/${{ inputs.episode }}" public props.json
+        run: python voice.py "episodes/${{ inputs.topic != '' && 'ai_episode.json' || inputs.episode }}" public props.json
       - name: Render the explainer (1920x1080) and the Short (1080x1920)
         run: |
           npx remotion render src/index.ts Explainer out/video.mp4 --props=props.json --concurrency=4 --crf=18
@@ -43,6 +55,7 @@ jobs:
         run: |
           mkdir -p out/stills
           for t in 5 20 40 60 80 100 120 140 160 180 200 220; do ffmpeg -y -loglevel error -ss $t -i out/video_final.mp4 -frames:v 1 -vf scale=960:-1 out/stills/v_$t.jpg || true; done
+          cp episodes/ai_episode.txt out/stills/script.txt 2>/dev/null || true
           for t in 2 10 20 30 40; do ffmpeg -y -loglevel error -ss $t -i out/short_final.mp4 -frames:v 1 -vf scale=540:-1 out/stills/s_$t.jpg || true; done
       - uses: actions/upload-artifact@v4
         with: {name: explainer-video, path: "studio/explainer/out/*_final.mp4", retention-days: 14}
