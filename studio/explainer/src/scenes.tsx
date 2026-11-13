@@ -160,8 +160,8 @@ export const Bars: React.FC<any> = ({ title, items }) => {
         return <div key={i} style={{ marginTop: 50 * u }}>
           <div style={{ fontFamily: SANS, fontSize: 32 * u, color: C.text, marginBottom: 12 * u, opacity: fade(f, 15 + i * 25) }}>{it.label}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 24 * u }}>
-            <div style={{ height: 46 * u, width: `${(it.value / max) * 78 * g}%`, background: i ? `linear-gradient(90deg, ${C.ice}, #5f9fd0)` : `linear-gradient(90deg, ${C.gold}, ${C.gold2})` }} />
-            <div style={{ fontFamily: SERIF, fontSize: 56 * u, color: i ? C.ice : C.gold2, fontVariantNumeric: "tabular-nums" }}>{it.prefix || ""}{Math.round(it.value * g).toLocaleString("en-US")}{it.suffix || ""}</div>
+            <div style={{ height: 46 * u, width: `${Math.max(1.5, (it.value / max) * 78) * g}%`, background: i ? `linear-gradient(90deg, ${C.ice}, #5f9fd0)` : `linear-gradient(90deg, ${C.gold}, ${C.gold2})` }} />
+            <div style={{ fontFamily: SERIF, fontSize: 56 * u, color: i ? C.ice : C.gold2, fontVariantNumeric: "tabular-nums" }}>{it.prefix || ""}{(it.value < 10 ? +(it.value * g).toPrecision(2) : Math.round(it.value * g)).toLocaleString("en-US")}{it.suffix || ""}</div>
           </div>
         </div>;
       })}

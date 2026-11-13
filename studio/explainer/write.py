@@ -5,7 +5,28 @@ Two passes: writer -> editor/fact-checker. Free NVIDIA API (NVIDIA_API_KEY)."""
 import json, os, re, sys, time
 import httpx
 
-MODELS = [m for m in os.environ.get("LLM_MODELS", "meta/llama-3.3-70b-instruct,nvidia/llama-3.3-nemotron-super-49b-v1,nvidia/nemotron-3.5-lightning-30b-a3b").split(",") if m]
+PREFER = ["moonshotai/kimi-k2", "qwen/qwen3-235b", "deepseek-ai/deepseek-v3", "openai/gpt-oss-120b", "meta/llama-4-maverick",
+          "nvidia/llama-3.3-nemotron-super", "meta/llama-3.3-70b", "qwen/qwen3", "nvidia/nemotron-3.5-lightning-30b-a3b"]
+
+
+def pick_models():
+    """Ask NVIDIA which models exist right now and use the strongest ones from our preference list."""
+    try:
+        ids = [m["id"] for m in httpx.get("https://integrate.api.nvidia.com/v1/models", timeout=60,
+                                          headers={"Authorization": f"Bearer {os.environ['NVIDIA_API_KEY']}"}).json()["data"]]
+    except Exception as exc:
+        log("model list failed:", exc); ids = []
+    chosen = []
+    for p in PREFER:
+        hits = sorted([i for i in ids if i.startswith(p) and "base" not in i and "vision" not in i and "embed" not in i], reverse=True)
+        if hits and hits[0] not in chosen:
+            chosen.append(hits[0])
+    chosen = chosen or ["nvidia/nemotron-3.5-lightning-30b-a3b"]
+    log("models available, in order of preference:", chosen[:5])
+    return chosen
+
+
+MODELS = [m for m in os.environ.get("LLM_MODELS", "").split(",") if m] or pick_models()
 SCENES = {  # scene type -> fields the AI must fill (the visual building blocks we have)
     "title": "kicker (short caps tag), title (1-3 words), subtitle (short line)",
     "counter": "value (integer), label (what is counted), sub (context line)",
@@ -33,7 +54,7 @@ log = lambda *a: print(*a, file=sys.stderr, flush=True)
 
 def llm(prompt, temperature=0.7):
     for attempt in range(6):
-        model = MODELS[min(attempt // 2, len(MODELS) - 1)]
+        model = MODELS[min(attempt, len(MODELS) - 1)]
         try:
             r = httpx.post("https://integrate.api.nvidia.com/v1/chat/completions", timeout=600,
                            headers={"Authorization": f"Bearer {os.environ['NVIDIA_API_KEY']}"},
@@ -42,7 +63,7 @@ def llm(prompt, temperature=0.7):
                                  "chat_template_kwargs": {"thinking": False, "enable_thinking": False}})
             r.raise_for_status(); log("model:", model); return r.json()["choices"][0]["message"]["content"]
         except Exception as exc:
-            log("LLM retry:", str(exc)[:200]); time.sleep(10 * (attempt + 1))
+            log("LLM retry:", model, str(exc)[:200]); time.sleep(5 * (attempt + 1))
     raise SystemExit("LLM unavailable")
 
 
@@ -56,7 +77,14 @@ def ask_json(prompt, temperature=0.7):
     raise SystemExit("no JSON from the LLM")
 
 
+ELECTRONIC = {"valve", "silicon", "mosfet", "circuit", "binary"}
+ELECTRONIC_WORDS = ("transistor", "mosfet", "semiconductor", "chip", "circuit", "diode", "silicon", "binary", "logic gate", "electronic")
 LIB = "\n".join(f'- "{k}": {v}' for k, v in SCENES.items())
+
+
+def library(topic):
+    on_topic = any(w in topic.lower() for w in ELECTRONIC_WORDS)
+    return "\n".join(f'- "{k}": {v}' for k, v in SCENES.items() if on_topic or k not in ELECTRONIC)
 VOICE_RULES = """NARRATION STYLE (most important): it must sound like a smart friend talking, not a textbook.
 Short sentences. Contractions (it's, you'll, here's). Questions to the viewer. Little reactions ("Wait.", "Here's the trick.").
 Concrete analogies from daily life. No filler, no "In this video we will". Every scene's narration is 1-4 sentences.
@@ -65,10 +93,13 @@ ACCURACY: only well-established facts. If a number is approximate say "about". N
 
 def research(topic):
     """Facts come from sources, not from the model's memory: Wikipedia search -> top articles' text."""
-    H = {"User-Agent": "GetYrStudio-explainer/1.0 (educational video research)"}
+    H = {"User-Agent": "GetYrStudioExplainer/1.0 (open-source educational video tool; python-httpx)", "Accept": "application/json"}
     try:
-        q = httpx.get("https://en.wikipedia.org/w/api.php", headers=H, timeout=30, params={
-            "action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 3}).json()
+        r0 = httpx.get("https://en.wikipedia.org/w/api.php", headers=H, timeout=30, params={
+            "action": "query", "list": "search", "srsearch": topic, "format": "json", "srlimit": 3})
+        if r0.status_code != 200 or not r0.text.startswith("{"):
+            log("wikipedia said:", r0.status_code, r0.text[:200])
+        q = r0.json()
         titles = [h["title"] for h in q["query"]["search"]]
         text = []
         for t in titles:
@@ -83,7 +114,11 @@ def research(topic):
 
 
 def write(topic, tag):
+    global LIB
+    LIB = library(topic)
     src = research(topic)
+    if len(src) < 2000:
+        raise SystemExit("No research sources found - refusing to write a script from memory")
     prompt = f"""You write narration + visual plans for a premium animated explainer channel ("GetYr Studio").
 TOPIC: {topic}
 
@@ -158,6 +193,18 @@ EPISODE:
 {json.dumps(ep, ensure_ascii=False)}
 
 Return ONLY the corrected JSON."""
+    def unsourced(e):
+        flat = re.sub(r"[,\s]", "", src.lower()); bad = []
+        for x in e.get("scenes", []) + e.get("short_scenes", []):
+            for n in re.findall(r"\d[\d,.]*\d|\d", x.get("narration", "")):
+                n2 = n.replace(",", "").rstrip(".")
+                if len(n2) >= 2 and n2 not in flat:
+                    bad.append(f'"{n}" in: {x["narration"]}')
+        return bad
+    bad = unsourced(ep)
+    if bad:
+        log("numbers not found in the sources:", len(bad))
+        review += "\n\nTHESE NUMBERS ARE NOT IN THE SOURCES - correct them from the sources or remove them:\n" + "\n".join(bad[:30])
     try:
         ep2 = ask_json(review, 0.3)
         if len(ep2.get("scenes", [])) >= 0.85 * len(ep.get("scenes", [])) and words(ep2) >= 0.85 * words(ep):
@@ -221,11 +268,14 @@ OK_LICENCES = ("cc0", "public domain", "pd", "cc by", "cc-by")  # commercial use
 
 
 def fetch_photo(query, dest):
-    H = {"User-Agent": "GetYrStudio-explainer/1.0 (educational video research)"}
+    H = {"User-Agent": "GetYrStudioExplainer/1.0 (open-source educational video tool; python-httpx)", "Accept": "application/json"}
     try:
-        r = httpx.get("https://commons.wikimedia.org/w/api.php", headers=H, timeout=30, params={
+        rr = httpx.get("https://commons.wikimedia.org/w/api.php", headers=H, timeout=30, params={
             "action": "query", "generator": "search", "gsrsearch": f"{query} filetype:bitmap", "gsrnamespace": 6, "gsrlimit": 12,
-            "prop": "imageinfo", "iiprop": "url|extmetadata|size", "iiurlwidth": 1920, "format": "json"}).json()
+            "prop": "imageinfo", "iiprop": "url|extmetadata|size", "iiurlwidth": 1920, "format": "json"})
+        if rr.status_code != 200 or not rr.text.startswith("{"):
+            log("commons said:", rr.status_code, rr.text[:200])
+        r = rr.json()
         pages = sorted(r.get("query", {}).get("pages", {}).values(), key=lambda p: p.get("index", 99))
         for p in pages:
             ii = (p.get("imageinfo") or [{}])[0]; md = ii.get("extmetadata", {})
