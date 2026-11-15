@@ -16,6 +16,27 @@ trackside long lens, helicopter, driver close-up). To start a different series, 
 Every day at 20:17 UTC a new film is made with no input: the AI picks the genre, invents the idea, and
 the finished film + Short are published under **Releases** (kept forever).
 
+## Music creator (your own Suno)
+Actions → **Music creator** → *Run workflow*. Type a one-line idea and you get **two versions of a full
+song with vocals** (MP3), a **music video** (MP4) and the lyrics, published under **Releases** so you can
+play them straight from your phone. It runs the open-source ACE-Step 1.5 model (MIT licence, commercial
+use allowed) on Kaggle's free GPU, and the model writes its own lyrics, so there is no paid API anywhere.
+
+| input | what it does |
+|---|---|
+| `prompt` | the idea and the style: genre, mood, instruments, singer |
+| `lyrics` | your own lyrics (use `/` for a new line); leave empty and the AI writes them |
+| `title` | song title (optional) |
+| `language` | singing language: `en` (default), `hi`, `te`, `ta`, `bn`, `pa`, `ur`, ... (`auto` lets the AI pick, and it often picks Chinese) |
+| `instrumental` | music only, no vocals |
+| `duration` | seconds (0 = the AI decides, max 300) |
+| `quality` | `fast` (turbo model) or `high` (cleaner sound, slower) |
+
+A run takes about 10 minutes once Kaggle starts it (most of that is setting up the model); when Kaggle's
+free GPUs are busy the job can wait in their queue first. Code: `studio/music/`
+(`kaggle_music.py` sets up ACE-Step on Kaggle, `gen_song.py` makes the songs, `finish.py` makes the MP3s
+and the video). Secrets: `KAGGLE_USERNAME` + `KAGGLE_KEY` (or `KAGGLE_API_TOKEN`).
+
 ## How to make a film by hand
 Actions → **Short film** → *Run workflow*:
 
