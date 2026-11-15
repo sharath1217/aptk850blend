@@ -30,6 +30,13 @@ if "P100" in gpu:
 sh(f"{sys.executable} -m pip install -q uv")
 sh(f"rm -rf {ACE} && git init -q {ACE} && git -C {ACE} remote add origin https://github.com/ace-step/ACE-Step-1.5 "
    f"&& git -C {ACE} fetch -q --depth 1 origin {SHA} && git -C {ACE} checkout -q FETCH_HEAD")
+# Kaggle's T4 is an older GPU: ACE-Step picks half precision (float16) for it, and that overflows into silence
+# (NaN). Full precision (float32) is safe and still fits in the T4's 15 GB.
+f = f"{ACE}/acestep/core/generation/handler/init_service_orchestrator.py"
+src = open(f).read()
+if "self.dtype = torch.float16" not in src:
+    sys.exit("Error: ACE-Step changed, the float32 patch no longer applies (update SHA / the patch)")
+open(f, "w").write(src.replace("self.dtype = torch.float16", "self.dtype = torch.float32"))
 sh(f"{sys.executable} -m uv sync --no-dev", cwd=ACE)     # ACE-Step's own Python + exact package versions
 open(f"{ACE}/job.json", "w").write(JOB)                  # noqa: F821 (embedded by kaggle_job.py)
 open(f"{ACE}/gen_song.py", "w").write(GEN)               # noqa: F821
