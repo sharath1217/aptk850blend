@@ -1,0 +1,104 @@
+name: Music creator (Kaggle GPU + ACE-Step 1.5)
+
+on:
+  push:
+    branches: [music-creator]   # TEMP: test trigger, removed before merge
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "The song: idea + style (e.g. 'upbeat Telugu folk-pop song about the first rain, female singer')"
+        required: true
+        default: "an uplifting indie pop song about chasing a dream in a small town, warm male vocal, catchy chorus"
+      lyrics:
+        description: "Your own lyrics (optional). Use / for a new line. Empty = the AI writes them"
+        default: ""
+      title:
+        description: "Song title (optional)"
+        default: ""
+      language:
+        description: "Singing language code: en, hi, te, ta, bn, pa, ur, es, ko, ja ... (auto = from the prompt)"
+        default: "auto"
+      instrumental:
+        description: "No vocals (music only)"
+        type: boolean
+        default: false
+      duration:
+        description: "Length in seconds (0 = the AI decides, max 300)"
+        default: "0"
+      quality:
+        description: "fast = ready sooner · high = cleaner sound"
+        type: choice
+        options: [fast, high]
+        default: fast
+
+permissions:
+  contents: write   # finished songs are published as GitHub Releases (play them straight from your phone)
+
+env:
+  KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+  KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+  KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN || (startsWith(secrets.KAGGLE_KEY, 'KGAT_') && secrets.KAGGLE_KEY || '') }}
+
+jobs:
+  song:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install tools
+        run: |
+          pip install -q -U kaggle six
+          if ! command -v ffmpeg >/dev/null; then
+            pip install -q imageio-ffmpeg
+            sudo ln -sf "$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg
+          fi
+      - name: Write the job
+        env:   # inputs go through env so quotes in a prompt or lyrics cannot break the script
+          PROMPT: ${{ inputs.prompt || 'an uplifting indie pop song about chasing a dream in a small town, warm male vocal, catchy chorus' }}
+          LYRICS: ${{ inputs.lyrics }}
+          LANGUAGE: ${{ inputs.language || 'auto' }}
+          INSTRUMENTAL: ${{ inputs.instrumental }}
+          DURATION: ${{ inputs.duration || '60' }}
+          QUALITY: ${{ inputs.quality || 'fast' }}
+        run: |
+          python - <<'PY'
+          import json, os, re
+          e = os.environ
+          lang = e["LANGUAGE"].strip().lower()
+          try: dur = max(0.0, min(float(e["DURATION"] or 0), 300.0))
+          except ValueError: dur = 0.0
+          lyrics = "\n".join(l.strip() for l in re.split(r"\s*/\s*|\\n", e["LYRICS"])).strip()
+          json.dump({"prompt": e["PROMPT"].strip(), "lyrics": lyrics, "language": "unknown" if lang in ("", "auto") else lang,
+                     "instrumental": e["INSTRUMENTAL"] == "true", "duration": dur, "quality": e["QUALITY"], "songs": 2},
+                    open("job.json", "w"), ensure_ascii=False)
+          print(open("job.json").read())
+          PY
+      - name: Make the song on Kaggle's free GPU
+        run: python studio/ai/kaggle_job.py getyr-music studio/music/kaggle_music.py out JOB=job.json GEN=studio/music/gen_song.py
+      - name: Show the Kaggle log if it failed
+        if: failure()
+        run: |
+          python - <<'PY'
+          import glob, json
+          for f in glob.glob("out/*.log"):
+              try: lines = [x.get("data", "") for x in json.load(open(f))]
+              except Exception: lines = open(f).read().splitlines(True)
+              print("".join(lines)[-12000:])
+          PY
+      - name: MP3s + music video
+        env: {TITLE: "${{ inputs.title }}"}
+        run: |
+          python studio/music/finish.py out dist "$TITLE"
+          cat dist/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish (Releases)
+        env: {GH_TOKEN: "${{ github.token }}"}
+        run: |
+          TAG="song-$(date +%Y%m%d)-${{ github.run_id }}"
+          gh release create "$TAG" dist/*.mp3 dist/*.mp4 dist/lyrics.txt --repo "${{ github.repository }}" \
+            --title "🎵 $(cat dist/title.txt)" --notes-file dist/summary.md
+          echo "**Listen:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/$TAG" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: song, path: "dist/\nout/*.log\njob.json", retention-days: 14, if-no-files-found: ignore}
