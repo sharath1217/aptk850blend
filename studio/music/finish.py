@@ -9,7 +9,12 @@ from pathlib import Path
 
 src, dist = Path(sys.argv[1]), Path(sys.argv[2])
 info = json.load(open(src / "song.json"))
-title = (sys.argv[3] if len(sys.argv) > 3 else "").strip() or " ".join(info["prompt"].split()[:6]).title()
+title = (sys.argv[3] if len(sys.argv) > 3 else "").strip()
+if not title:   # no title given: the first words of the idea, without a dangling "about", "of the" ...
+    words = re.sub(r"[,.;:!?].*", "", info["prompt"]).split()[:6]
+    while len(words) > 1 and words[-1].lower() in ("a", "an", "the", "about", "of", "in", "on", "for", "with", "and", "to", "my"):
+        words.pop()
+    title = " ".join(words).title()
 slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40] or "song"
 dist.mkdir(parents=True, exist_ok=True)
 FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
@@ -44,11 +49,12 @@ if font and title.isascii():   # the bundled fonts only cover Latin letters; oth
             f",drawtext=fontfile={font}:textfile={tmp / 'sub.txt'}:fontcolor=white@0.8:fontsize=26:x=(w-text_w)/2:y=260")
 video = dist / f"{slug}.mp4"
 ff("-i", str(mp3s[0]), "-f", "lavfi", "-i",
-   "gradients=s=1280x720:r=25:c0=0x1b1035:c1=0x0b3a5b:c2=0xb8336a:c3=0x12263a:n=4:speed=0.008",
+   "gradients=s=1280x720:r=20:c0=0x1b1035:c1=0x0b3a5b:c2=0xb8336a:c3=0x12263a:n=4:speed=0.008",
    "-filter_complex",
-   "[0:a]showwaves=s=1280x240:mode=cline:scale=sqrt:rate=25:colors=white@0.9,format=rgba[w];"
+   "[0:a]aformat=channel_layouts=mono,showwaves=s=1280x240:mode=cline:scale=sqrt:rate=20:colors=white:draw=full,"
+   "colorkey=black:0.15:0.1[w];"
    f"[1:v][w]overlay=0:400:shortest=1{text},format=yuv420p[v]",
-   "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-c:a", "aac", "-b:a", "192k",
+   "-map", "[v]", "-map", "0:a", "-c:v", "libx264", "-preset", "fast", "-crf", "30", "-c:a", "aac", "-b:a", "192k",
    "-shortest", "-movflags", "+faststart", str(video))
 
 lyrics = info.get("lyrics") or ""

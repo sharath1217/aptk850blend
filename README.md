@@ -27,12 +27,13 @@ use allowed) on Kaggle's free GPU, and the model writes its own lyrics, so there
 | `prompt` | the idea and the style: genre, mood, instruments, singer |
 | `lyrics` | your own lyrics (use `/` for a new line); leave empty and the AI writes them |
 | `title` | song title (optional) |
-| `language` | singing language: `en`, `hi`, `te`, `ta`, `bn`, `pa`, `ur`, ... or `auto` |
+| `language` | singing language: `en` (default), `hi`, `te`, `ta`, `bn`, `pa`, `ur`, ... (`auto` lets the AI pick, and it often picks Chinese) |
 | `instrumental` | music only, no vocals |
 | `duration` | seconds (0 = the AI decides, max 300) |
 | `quality` | `fast` (turbo model) or `high` (cleaner sound, slower) |
 
-A run takes about 20–30 minutes, most of it setting up the model on Kaggle. Code: `studio/music/`
+A run takes about 10 minutes once Kaggle starts it (most of that is setting up the model); when Kaggle's
+free GPUs are busy the job can wait in their queue first. Code: `studio/music/`
 (`kaggle_music.py` sets up ACE-Step on Kaggle, `gen_song.py` makes the songs, `finish.py` makes the MP3s
 and the video). Secrets: `KAGGLE_USERNAME` + `KAGGLE_KEY` (or `KAGGLE_API_TOKEN`).
 

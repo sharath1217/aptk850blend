@@ -1,8 +1,6 @@
 name: Music creator (Kaggle GPU + ACE-Step 1.5)
 
 on:
-  push:
-    branches: [music-creator]   # TEMP: test trigger, removed before merge
   workflow_dispatch:
     inputs:
       prompt:
@@ -16,8 +14,8 @@ on:
         description: "Song title (optional)"
         default: ""
       language:
-        description: "Singing language code: en, hi, te, ta, bn, pa, ur, es, ko, ja ... (auto = from the prompt)"
-        default: "auto"
+        description: "Singing language code: en, hi, te, ta, bn, pa, ur, es, ko, ja ... (auto = the AI picks)"
+        default: "en"
       instrumental:
         description: "No vocals (music only)"
         type: boolean
@@ -58,9 +56,9 @@ jobs:
         env:   # inputs go through env so quotes in a prompt or lyrics cannot break the script
           PROMPT: ${{ inputs.prompt || 'an uplifting indie pop song about chasing a dream in a small town, warm male vocal, catchy chorus' }}
           LYRICS: ${{ inputs.lyrics }}
-          LANGUAGE: ${{ inputs.language || 'auto' }}
+          LANGUAGE: ${{ inputs.language || 'en' }}
           INSTRUMENTAL: ${{ inputs.instrumental }}
-          DURATION: ${{ inputs.duration || '60' }}
+          DURATION: ${{ inputs.duration || '0' }}
           QUALITY: ${{ inputs.quality || 'fast' }}
         run: |
           python - <<'PY'
